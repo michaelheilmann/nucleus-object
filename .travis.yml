@@ -1,0 +1,113 @@
+# Copyright (c) 2017, 2018 Michael Heilmann
+
+# Require sudo (to install software).
+sudo: required
+# Select Ubuntu 'Trusty'.
+dist: trusty
+# Select language C.
+language: c
+
+# Compile once for Linux and once for OS X.
+os:
+    - linux
+    - osx
+
+# Compile once for Clang and once for GCC.
+compiler:
+    - clang
+    - gcc
+
+matrix:
+    # Remove default jobs.
+    exclude:
+        - compiler: gcc
+        - compiler: clang
+    # Add non-default jobs.
+    include:
+        - compiler: gcc
+          os: linux
+          addons:
+            apt:
+                sources:
+                    # add PPAs with more up-to-date toolchains
+                    - ubuntu-toolchain-r-test
+                    - george-edison55-precise-backports
+                    - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
+                      key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
+                packages:
+                    # GCC 6.
+                    - gcc-6
+                    # CMake (outdated).
+                    - cmake-data
+                    - cmake
+          env:
+            - MATRIX_EVAL_BEFORE_INSTALL="CC=gcc-6"
+            - MATRIX_EVAL_BEFORE_SCRIPT="export CC=gcc-6"    
+        - compiler: clang
+          os: linux
+          addons:
+            apt:
+                sources:
+                    # add PPAs with more up-to-date toolchains
+                    - ubuntu-toolchain-r-test
+                    - george-edison55-precise-backports
+                    - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
+                      key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
+                packages:
+                    # GCC 6
+                    - gcc-6
+                    # CLANG 4.0
+                    - clang-4.0
+                    - libc++-dev
+                    # CMake (outdated)
+                    - cmake-data
+                    - cmake
+          env:
+            - MATRIX_EVAL_BEFORE_INSTALL="CC=clang-4.0"
+            - MATRIX_EVAL_BEFORE_SCRIPT="export CC=clang-4.0"
+        - compiler: clang
+          os: osx
+          env:
+            - MATRIX_EVAL_BEFORE_INSTALL="CC=clang"
+            - MATRIX_EVAL_BEFORE_SCRIPT="export CC=clang"   
+
+before_install:
+- eval "${MATRIX_EVAL_BEFORE_INSTALL}"
+  
+# Download and install CMake.
+install:
+# Create a dependency directory. Store its path in `${DEPS_DIR}`.
+- DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+- mkdir -p "${DEPS_DIR}" && cd "${DEPS_DIR}"
+# Download CMake 3.10.1 binary into `${DEPS_DIR}/cmake`.
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then CMAKE_BIN_URL="https://cmake.org/files/v3.10/cmake-3.10.1-Darwin-x86_64.tar.gz" ; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then CMAKE_BIN_URL="https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.tar.gz" ; fi
+# Unpack it and export its binary directory to path.
+- |
+  mkdir -p cmake-bin
+  cd cmake-bin
+  wget --no-check-certificate -O - -q "${CMAKE_BIN_URL}" | tar xsz --strip-components=1 -f -
+  cd ..
+  export PATH="${DEPS_DIR}/cmake-bin/bin:${PATH}"
+
+before_script:  
+# Invoke CMake on CMakeLists.txt.
+- eval "${MATRIX_EVAL_BEFORE_SCRIPT}"
+- cd "${TRAVIS_BUILD_DIR}"
+- cmake CMakeLists.txt
+
+script:
+# Enter the Travis build directory.
+- cd "${TRAVIS_BUILD_DIR}"
+# Run "make all" and "make test".
+- make all
+- ctest --output-on-failure --extra-verbose
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/deeca47d07972d6be9c3
+      - https://webhooks.gitter.im/e/b8067a6aaf118ec7e6a1
+    on_success: always  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start:   never   # options: [always|never|change] default: always
