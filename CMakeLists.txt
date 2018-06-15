@@ -14,14 +14,14 @@ endif()
 define_module(Nucleus.Object)
 detect_operating_system(Nucleus.Object)
 
-# If "shared" is not defined, default to "OFF".
-if (NOT DEFINED Nucleus.Object.Library-Shared)
-  set(Nucleus.Object.Library-Shared OFF)
+# If "shared" is not defined, default to "ON".
+if (NOT DEFINED Nucleus.Object-Shared)
+  set(Nucleus.Object-Shared ON)
 endif()
 
 # Include "Nucleus" unless it is already included.
 if (NOT NUCLEUS_INCLUDED)
-  set(Nucleus.Library-Shared {Nucleus.Object.Library-Shared})
+  set(Nucleus-Shared {Nucleus.Object-Shared})
   set(Nucleus-With-Optimizations ${Nucleus.Object-With-Optimizations})
   set(Nucleus-With-Debug-Information ${Nucleus.Object-With-Debug-Information})
   add_subdirectory(${NUCLEUS_PATH})
