@@ -1,4 +1,6 @@
+// Copyright (c) 2018 Michael Heilmann
 #include "Nucleus/Status.h"
+#include "Nucleus/Configuration.h"
 
 #if (Nucleus_OperatingSystem == Nucleus_OperatingSystem_WINDOWS)
     #define Nucleus_PluginExport() __declspec(dllexport)
