@@ -11,33 +11,6 @@
   #include "Nucleus/Object/DynamicLibraryWindows.h"
 #endif
 
-Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
-                            "Nucleus_DynamicLibrary",
-                            Nucleus_DynamicLibrary,
-                            Nucleus_Object)
-
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-constructDispatch
-    (
-        Nucleus_DynamicLibrary_Class *dispatch
-    )
-{
-    dispatch->load = NULL;
-    dispatch->getSymbol = NULL;
-    return Nucleus_Status_Success;
-}
-
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-destruct
-    (
-        Nucleus_DynamicLibrary *self
-    )
-{
-    free(self->pathname);
-    self->pathname = NULL;
-    return Nucleus_Status_Success;
-}
-
 Nucleus_NonNull() Nucleus_Status
 Nucleus_DynamicLibrary_construct
     (
@@ -46,17 +19,27 @@ Nucleus_DynamicLibrary_construct
     )
 {
     if (Nucleus_Unlikely(!self || !pathname)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Type *type;
     Nucleus_Status status;
-    status = Nucleus_DynamicLibrary_getType(&type);
-    if (Nucleus_Unlikely(status)) return status;
-    Nucleus_Object_construct(NUCLEUS_OBJECT(self));
     self->pathname = strdup(pathname);
     if (Nucleus_Unlikely(!self->pathname))
     {
         return Nucleus_Status_AllocationFailed;
     }
-    NUCLEUS_OBJECT(self)->type = type;
+    self->referenceCount = 1;
+    self->load = NULL;
+    self->getSymbol = NULL;
+    self->destruct = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibrary_destruct;
+    return Nucleus_Status_Success;
+}
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() Nucleus_Status
+Nucleus_DynamicLibrary_destruct
+    (
+        Nucleus_DynamicLibrary *self
+    )
+{
+    free(self->pathname);
+    self->pathname = NULL;
     return Nucleus_Status_Success;
 }
 
@@ -79,7 +62,7 @@ Nucleus_DynamicLibrary_load
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    return NUCLEUS_DYNAMICLIBRARY_CLASS(NUCLEUS_OBJECT(self)->type->dispatch)->load(self);
+    return self->load(self);
 }
 
 Nucleus_NonNull() Nucleus_Status
@@ -91,5 +74,29 @@ Nucleus_DynamicLibrary_getSymbol
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    return NUCLEUS_DYNAMICLIBRARY_CLASS(NUCLEUS_OBJECT(self)->type->dispatch)->getSymbol(self, symbolName, symbol);
+    return self->getSymbol(self, symbolName, symbol);
+}
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_DynamicLibrary_lock
+    (
+        Nucleus_DynamicLibrary *self
+    )
+{
+    self->referenceCount++;
+    return Nucleus_Status_Success;
+}
+    
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_DynamicLibrary_unlock
+    (
+        Nucleus_DynamicLibrary *self
+    )
+{
+    if (0 == --self->referenceCount)
+    {
+        self->destruct(self);
+        Nucleus_deallocateMemory(self);
+    }
+    return Nucleus_Status_Success;
 }

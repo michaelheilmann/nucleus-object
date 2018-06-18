@@ -1,5 +1,5 @@
 // Copyright (c) 2018 Michael Heilmann
-#include "Nucleus/Object/TypeSystem.h"
+#include "Nucleus/Object/Types.h"
 #include <stdlib.h>
 
 int
@@ -10,11 +10,11 @@ main
     )
 {
     Nucleus_Status status;
-    status = Nucleus_TypeSystem_startup();
+    status = Nucleus_Types_initialize();
     if (Nucleus_Unlikely(status)) { return EXIT_FAILURE; }
-    status = Nucleus_TypeSystem_startup();
+    status = Nucleus_Types_initialize();
     if (Nucleus_Unlikely(status)) { return EXIT_FAILURE; }
-    Nucleus_TypeSystem_shutdown();
-    Nucleus_TypeSystem_shutdown();
+    Nucleus_Types_uninitialize();
+    Nucleus_Types_uninitialize();
     return EXIT_SUCCESS;
 }

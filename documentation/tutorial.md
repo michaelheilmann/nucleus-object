@@ -12,28 +12,28 @@ and needs to explicitly uninitialized when it is no longer required.
 int main(int argc, char **argv)
 {
     Nucleus_Status status;
-    status = Nucleus_initializeObject();
+    status = Nucleus_Types_initialize();
     if (Nucleus_Unlikely(status))
     { return EXIT_FAILURE; }
     /* Do something with the library. */
-    Nucleus_uninitializeObject();
+    Nucleus_Types_uninitialize();
     return EXIT_SUCCESS;
 }
 ```
 
 
-The Nucleus_TypeSystem singleton is reference counted to facilate integration into libraries
+The Nucleus_Types singleton is reference counted to facilate integration into libraries
 agnostic of each other.
 
 The initial reference count of the type system is `0`.
-A successfull call to `Nucleus_TypeSystem_initialize` will increment the reference count by `1`.
+A successfull call to `Nucleus_Types_initialize` will increment the reference count by `1`.
 In the step from `0` to `1`, the type system will is initialized.
 Likewise:
-A successfull call to `Nucleus_TypeSystem_uninitialize` will decrement the reference count by `1`.
+A successfull call to `Nucleus_Types_uninitialize` will decrement the reference count by `1`.
 In the stop from `1` to `0`, the type system will be uninitialized.
 
-That is, as long as each library balances its calls to `Nucleus_TypeSystem_initialize` and
-`Nucleus_TypeSystem_uninitialize` properly, it is not relevant which library and in what
+That is, as long as each library balances its calls to `Nucleus_Types_initialize` and
+`Nucleus_Types_uninitialize` properly, it is not relevant which library and in what
 order the libraries (un)initialize the singleton.
 
 # Types and Objects
@@ -132,22 +132,20 @@ Nucleus_Status run()
 int main(int argc, char **argv)
 {
     Nucleus_Status status;
-    status = Nucleus_initializeObject();
+    status = Nucleus_Types_initialize();
     if (Nucleus_Unlikely(status))
     { return EXIT_FAILURE; }
     status = run();
     if (Nucleus_Unlikely(status))
     {
-        Nucleus_uninitializeObject();
+        Nucleus_Types_uninitialize();
         return EXIT_FAILURE;
     }
     /* Do something with the library. */
-    Nucleus_uninitializeObject();
+    Nucleus_Types_uninitialize();
     return EXIT_SUCCESS;
 }
 ```
-
-
 
 Values of type "Object" are always passed around by pointers.
 

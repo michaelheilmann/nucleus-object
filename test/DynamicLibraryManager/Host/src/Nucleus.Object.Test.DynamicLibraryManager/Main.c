@@ -1,6 +1,6 @@
 // Copyright (c) 2018 Michael Heilmann
-#include "Nucleus/Object/DynamicLibraryManager.h"
-#include "Nucleus/Object/TypeSystem.h"
+#include "Nucleus/Object/DynamicLibrary.h"
+#include "Nucleus/Object/Types.h"
 #include "Nucleus/Memory.h"
 #include "Nucleus/getExecutableDirectoryPathname.h"
 #include <stdlib.h>
@@ -26,7 +26,6 @@ getDynamicLoadableLibrarySearchPath
 Nucleus_Status
 load
     (
-        Nucleus_DynamicLibraryManager *dynamicLibraryManager,
         const char *dllFilename
     )
 {
@@ -57,7 +56,7 @@ load
     Nucleus_deallocateMemory(dllSearchPathPathname);
     
     // Load the DLL.
-    status = Nucleus_DynamicLibraryManager_load(dynamicLibraryManager, dllPathname, &dynamicLibrary);
+    status = Nucleus_Types_loadDynamicLibrary(dllPathname, &dynamicLibrary);
     if (Nucleus_Unlikely(status))
     {
         fprintf(stderr, u8"unable to load dynamically loadable library '%s'\n", dllPathname);
@@ -65,7 +64,7 @@ load
         return status;
     }
     Nucleus_deallocateMemory(dllPathname);
-    Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(dynamicLibrary));
+    Nucleus_DynamicLibrary_unlock(dynamicLibrary);
     return Nucleus_Status_Success;
 }
 
@@ -94,26 +93,15 @@ main
     Nucleus_Status status;
     int exitCode = EXIT_SUCCESS;
 
-    status = Nucleus_TypeSystem_startup();
+    status = Nucleus_Types_initialize();
     if (Nucleus_Unlikely(status)) { return EXIT_FAILURE; }
-    
-    Nucleus_DynamicLibraryManager *dynamicLibraryManager;
-    status = Nucleus_DynamicLibraryManager_create(&dynamicLibraryManager);
-    if (status)
-    { 
-        fprintf(stderr, u8"creation of Nucleus_DynamicLibraryManager failed\n");
-        Nucleus_TypeSystem_shutdown();
-        return EXIT_FAILURE;
-    }
-    fprintf(stdout, "creation of Nucleus_DynamicLibraryManager succeeded\n");
     //
-    status = load(dynamicLibraryManager, u8"Nucleus.Object.Test.DynamicLibraryManager.ClientA");
+    status = load(u8"Nucleus.Object.Test.DynamicLibraryManager.ClientA");
     if (status) { exitCode = EXIT_FAILURE; goto End; }
     //
-    status = load(dynamicLibraryManager, u8"Nucleus.Object.Test.DynamicLibraryManager.ClientB");
+    status = load(u8"Nucleus.Object.Test.DynamicLibraryManager.ClientB");
     if (status) { exitCode = EXIT_FAILURE; goto End; }
 End:
-    Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(dynamicLibraryManager));
-    Nucleus_TypeSystem_shutdown();
+    Nucleus_Types_uninitialize();
     return exitCode;
 }
