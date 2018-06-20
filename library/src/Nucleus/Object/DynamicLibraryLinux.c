@@ -9,35 +9,19 @@
 #include <dlfcn.h>
 #include <stdio.h>
 
-Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
-                            "Nucleus.DynamicLibraryLinux",
-                            Nucleus_DynamicLibraryLinux,
-                            Nucleus_DynamicLibrary)
-
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryLinux_load
+load
     (
         Nucleus_DynamicLibraryLinux *self
     );
 
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryLinux_getSymbol
+getSymbol
     (
         Nucleus_DynamicLibraryLinux *self,
         const char *symbolName,
         void **symbol
     );
-
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-constructDispatch
-    (
-        Nucleus_DynamicLibraryLinux_Class *dispatch
-    )
-{
-    NUCLEUS_DYNAMICLIBRARY_CLASS(dispatch)->load = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibraryLinux_load;
-    NUCLEUS_DYNAMICLIBRARY_CLASS(dispatch)->getSymbol = (Nucleus_Status (*)(Nucleus_DynamicLibrary *, const char *, void **))&Nucleus_DynamicLibraryLinux_getSymbol;
-    return Nucleus_Status_Success;
-}
 
 Nucleus_NonNull() Nucleus_Status
 Nucleus_DynamicLibraryLinux_construct
@@ -47,15 +31,32 @@ Nucleus_DynamicLibraryLinux_construct
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Type *type;
+    //Nucleus_Type *type;
     Nucleus_Status status;
-    status = Nucleus_DynamicLibraryLinux_getType(&type);
-    if (Nucleus_Unlikely(status)) return status;
+    //status = Nucleus_DynamicLibraryLinux_getType(&type);
+    //if (Nucleus_Unlikely(status)) return status;
     status = Nucleus_DynamicLibrary_construct(NUCLEUS_DYNAMICLIBRARY(self), pathname);
     if (Nucleus_Unlikely(status)) return status;
     self->handle = NULL;
-    NUCLEUS_OBJECT(self)->type = type;
+    NUCLEUS_DYNAMICLIBRARY(self)->load = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&load;
+    NUCLEUS_DYNAMICLIBRARY(self)->getSymbol = (Nucleus_Status (*)(Nucleus_DynamicLibrary *, const char *, void **))&getSymbol;
+    NUCLEUS_DYNAMICLIBRARY(self)->destruct = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibraryLinux_destruct;
+    //NUCLEUS_OBJECT(self)->type = type;
     return Nucleus_Status_Success;
+}
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() Nucleus_Status
+Nucleus_DynamicLibraryLinux_destruct
+    (
+        Nucleus_DynamicLibraryLinux *self
+    )
+{
+    if (NULL != self->handle)
+    {
+        dlclose(self->handle);
+        self->handle = NULL;
+    }
+    return Nucleus_DynamicLibrary_destruct(NUCLEUS_DYNAMICLIBRARY(self));
 }
 
 Nucleus_NonNull() Nucleus_Status
@@ -68,35 +69,21 @@ Nucleus_DynamicLibraryLinux_create
     if (Nucleus_Unlikely(!self || !pathname)) return Nucleus_Status_InvalidArgument;
     Nucleus_Status status;
     Nucleus_DynamicLibraryLinux *temporary;
-    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
-                                     sizeof(Nucleus_DynamicLibraryLinux));
+    status = Nucleus_allocateMemory((void **)&temporary,
+                                    sizeof(Nucleus_DynamicLibraryLinux));
     if (Nucleus_Unlikely(status)) return status;
     status = Nucleus_DynamicLibraryLinux_construct(temporary, pathname);
     if (Nucleus_Unlikely(status))
     {
-        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
+        Nucleus_deallocateMemory(temporary);// Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
         return status;
     }
     *self = temporary;
     return Nucleus_Status_Success;
 }
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-destruct
-    (
-        Nucleus_DynamicLibraryLinux *self
-    )
-{
-    if (NULL != self->handle)
-    {
-        dlclose(self->handle);
-        self->handle = NULL;
-    }
-    return Nucleus_Status_Success;
-}
-
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryLinux_load
+load
     (
         Nucleus_DynamicLibraryLinux *self
     )
@@ -116,7 +103,7 @@ Nucleus_DynamicLibraryLinux_load
 }
 
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryLinux_getSymbol
+getSymbol
     (
         Nucleus_DynamicLibraryLinux *self,
         const char *symbolName,

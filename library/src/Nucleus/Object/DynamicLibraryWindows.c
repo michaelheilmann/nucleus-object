@@ -6,35 +6,24 @@
 #include "Nucleus/Memory.h"
 #include "Nucleus/transcodeString.h"
 
-Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
-                            "Nucleus.DynamicLibraryWindows",
-                            Nucleus_DynamicLibraryWindows,
-                            Nucleus_DynamicLibrary)
-
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryWindows_load
+load
     (
         Nucleus_DynamicLibraryWindows *self
     );
 
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryWindows_getSymbol
+getSymbol
     (
         Nucleus_DynamicLibraryWindows *self,
         const char *symbolName,
         void **symbol
     );
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-constructDispatch
+Nucleus_NonNull() static Nucleus_Status
+destruct
     (
-        Nucleus_DynamicLibraryWindows_Class *dispatch
-    )
-{
-    NUCLEUS_DYNAMICLIBRARY_CLASS(dispatch)->load = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibraryWindows_load;
-    NUCLEUS_DYNAMICLIBRARY_CLASS(dispatch)->getSymbol = (Nucleus_Status (*)(Nucleus_DynamicLibrary *, const char *, void **))&Nucleus_DynamicLibraryWindows_getSymbol;
-    return Nucleus_Status_Success;
-}
+    );
    
 Nucleus_NonNull() Nucleus_Status
 Nucleus_DynamicLibraryWindows_construct
@@ -44,15 +33,28 @@ Nucleus_DynamicLibraryWindows_construct
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Type *type;
     Nucleus_Status status;
-    status = Nucleus_DynamicLibraryWindows_getType(&type);
-    if (Nucleus_Unlikely(status)) return status;
     status = Nucleus_DynamicLibrary_construct(NUCLEUS_DYNAMICLIBRARY(self), pathname);
     if (Nucleus_Unlikely(status)) return status;
     self->handle = NULL;
-    NUCLEUS_OBJECT(self)->type = type;
+    NUCLEUS_DYNAMICLIBRARY(self)->load = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&load;
+    NUCLEUS_DYNAMICLIBRARY(self)->getSymbol = (Nucleus_Status (*)(Nucleus_DynamicLibrary *, const char *, void **))&getSymbol;
+    NUCLEUS_DYNAMICLIBRARY(self)->destruct = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibraryWindows_destruct;
     return Nucleus_Status_Success;
+}
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() Nucleus_Status
+Nucleus_DynamicLibraryWindows_destruct
+    (
+        Nucleus_DynamicLibraryWindows *self
+    )
+{
+    if (NULL != self->handle)
+    {
+        FreeLibrary(self->handle);
+        self->handle = NULL;
+    }
+    return Nucleus_DynamicLibrary_destruct(NUCLEUS_DYNAMICLIBRARY(self));
 }
 
 Nucleus_NonNull() Nucleus_Status
@@ -65,35 +67,21 @@ Nucleus_DynamicLibraryWindows_create
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
     Nucleus_Status status;
     Nucleus_DynamicLibraryWindows *temporary;
-    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
+    status = Nucleus_allocateMemory((void **)&temporary,
                                      sizeof(Nucleus_DynamicLibraryWindows));
     if (Nucleus_Unlikely(status)) return status;
     status = Nucleus_DynamicLibraryWindows_construct(temporary, pathname);
     if (Nucleus_Unlikely(status))
     {
-        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
+        Nucleus_deallocateMemory(temporary);
         return status;
     }
     *self = temporary;
     return Nucleus_Status_Success;
 }
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
-destruct
-    (
-        Nucleus_DynamicLibraryWindows *self
-    )
-{
-    if (NULL != self->handle)
-    {
-        FreeLibrary(self->handle);
-        self->handle = NULL;
-    }
-    return Nucleus_Status_Success;
-}
-
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryWindows_load
+load
     (
         Nucleus_DynamicLibraryWindows *self
     )
@@ -116,7 +104,7 @@ Nucleus_DynamicLibraryWindows_load
 }
 
 Nucleus_NonNull() static Nucleus_Status
-Nucleus_DynamicLibraryWindows_getSymbol
+getSymbol
     (
         Nucleus_DynamicLibraryWindows *self,
         const char *symbolName,

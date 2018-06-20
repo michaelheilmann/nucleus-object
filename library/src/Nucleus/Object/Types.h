@@ -3,16 +3,26 @@
 
 #include "Nucleus/Annotations.h"
 #include "Nucleus/Status.h"
+#include "Nucleus/Types/HashValue.h"
 #include "Nucleus/Types/Size.h"
 #include "Nucleus/Object/Exports.h"
+
+// Class types are supported if this is defined and 1.
+#define Nucleus_WithClassTypes (1)
+
+
+// `Nucleus_DynamicLibrary`
+typedef struct Nucleus_DynamicLibrary Nucleus_DynamicLibrary;
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 // `Nucleus_Type`
 typedef struct Nucleus_Type Nucleus_Type;
 
-struct Nucleus_Type
+typedef struct ClassType ClassType;
+
+struct ClassType
 {
-    char *name;
-    
     Nucleus_Size objectSize;
     Nucleus_Status (*objectDestructor)(void *object);
     
@@ -21,76 +31,68 @@ struct Nucleus_Type
     
     Nucleus_Type *parentType;
     
-    Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdownContext)();
- 
     void *dispatch;
+    
+}; // struct ClassType
+
+struct Nucleus_Type
+{
+    char *name;
+    Nucleus_HashValue hashValue;
+    Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)();
+    ClassType classType;
 }; // struct Nucleus_Type
 
-// `Nucleus_TypeSystem`
-typedef struct Nucleus_TypeSystem Nucleus_TypeSystem;
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-// # `Nucleus_TypeSystem_get`
-// *Get the `Nucleus_TypeSystem` singleton.*
-// ## C Signature
-// ```
-// Nucleus_Status
-// Nucleus_TypeSystem_get
-//   (
-//       Nucleus_TypeSystem **typeSystem
-//   )
-// ```
-// ## Parameters
-// - `typeSystem` a pointer to a `(Nucleus_TypeSystem *)` variable
-// ## Description
-// If this function succeeds `*typeSystem` is assigned the address of a `Nucleus_TypeSystem` object.
-// This function fails iff `typeSystem` is a null pointer or the `Nucleus_TypeSystem` singleon does not exist.
-// `Nucleus_Status_InvalidArgument` is returned in the former case and `Nucleus_Status_NotExists` is returned in the latter case.
-Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
-Nucleus_TypeSystem_get
+Nucleus_NonNull() Nucleus_Status
+Nucleus_Type_hash
     (
-        Nucleus_TypeSystem **typeSystem
+        Nucleus_Type *type,
+        Nucleus_HashValue *hashValue
     );
 
-// # `Nucleus_TypeSystem_startup`
-// *Startup the `Nucleus_TypeSystem` singleton.*
+// # `Nucleus_Types_initialize`
+// *Startup the `Nucleus_Types` singleton.*
 // ## C Signature
 // ```
 // Nucleus_Status
-// Nucleus_TypeSystem_startup
+// Nucleus_Types_initialize
 //     (
 //     );
 // ```
 // ## Description
-// If the `Nucleus_TypeSystem` singleton does exist, `Nucleus_Status_Exists` is returned.
+// If the `Nucleus_Types` singleton does exist, `Nucleus_Status_Exists` is returned.
 // If it does not exist, then it is created.
 // If the creation fails, a non-zero status code is returned.
 Nucleus_Object_Library_Export Nucleus_Status
-Nucleus_TypeSystem_startup
+Nucleus_Types_initialize
     (
     );
 
-// # `Nucleus_TypeSystem_shutdown`
-// *Shutdown the `Nucleus_TypeSystem` singleton.*
+// # `Nucleus_Types_uninitialize`
+// *Shutdown the `Nucleus_Types` singleton.*
 // ## C Signature
 // ```
 // Nucleus_Status
-// Nucleus_TypeSystem_shutdown
+// Nucleus_Types_uninitialize
 //     (
 //     );
 // ```
 // ## Description
-// If the `Nucleus_TypeSystem` singleton does not exist, `Nucleus_Status_NotExists` is returned.
+// If the `Nucleus_Types` singleton does not exist, `Nucleus_Status_NotExists` is returned.
 // If it does exist, it is destroyed.
 Nucleus_Object_Library_Export Nucleus_Status
-Nucleus_TypeSystem_shutdown
+Nucleus_Types_uninitialize
     (
     );
 
-// Register a class.
+#if defined(Nucleus_WithClassTypes) && 1 == Nucleus_WithClassTypes
+
+// Add a class type.
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
-Nucleus_TypeSystem_registerClass
+Nucleus_Types_addClassType
     (
-        Nucleus_TypeSystem *typeSystem,
         Nucleus_Type **type,
         const char *name,
         Nucleus_Size objectSize,
@@ -98,8 +100,10 @@ Nucleus_TypeSystem_registerClass
         Nucleus_Size classSize,
         Nucleus_Status(*dispatchConstructor)(void *dispatch),
         Nucleus_Type *parentType,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdownContext)()
+        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
     );
+
+#endif
 
 // name the type name
 // cxxName the C type name
@@ -123,7 +127,7 @@ Nucleus_TypeSystem_registerClass
         ); \
 \
     Nucleus_AlwaysSucceed() static Nucleus_Status \
-    notifyShutdownContext \
+    notifyShutdown \
         ( \
         ); \
 \
@@ -134,7 +138,7 @@ Nucleus_TypeSystem_registerClass
         ); \
 \
     Nucleus_AlwaysSucceed() static Nucleus_Status \
-    notifyShutdownContext \
+    notifyShutdown \
         ( \
         ) \
     { \
@@ -151,24 +155,49 @@ Nucleus_TypeSystem_registerClass
         if (Nucleus_Unlikely(!type)) return Nucleus_Status_InvalidArgument; \
         if (Nucleus_Unlikely(!g_type)) \
         { \
-            Nucleus_TypeSystem *typeSystem; \
             Nucleus_Status status; \
-            status = Nucleus_TypeSystem_get(&typeSystem); \
-            if (Nucleus_Unlikely(status)) return status; \
             Nucleus_Type *parentType; \
             status = ParentNameCxx##_getType(&parentType); \
             if (Nucleus_Unlikely(status)) return status; \
-            status = Nucleus_TypeSystem_registerClass(typeSystem, \
-                                                      &g_type, \
-                                                      Name, \
-                                                      sizeof(NameCxx), \
-                                                      (Nucleus_Status (*)(void *))&destruct, \
-                                                      sizeof(NameCxx##_Class), \
-                                                      (Nucleus_Status (*)(void *))&constructDispatch, \
-                                                      parentType, \
-                                                      &notifyShutdownContext); \
+            status = Nucleus_Types_addClassType(&g_type, \
+                                                Name, \
+                                                sizeof(NameCxx), \
+                                                (Nucleus_Status (*)(void *))&destruct, \
+                                                sizeof(NameCxx##_Class), \
+                                                (Nucleus_Status (*)(void *))&constructDispatch, \
+                                                parentType, \
+                                                &notifyShutdown); \
             if (Nucleus_Unlikely(status)) return status; \
         } \
         *type = g_type; \
         return Nucleus_Status_Success; \
     }
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Types_loadDynamicLibrary
+    (
+        const char *pathname,
+        Nucleus_DynamicLibrary **dynamicLibrary
+    );
+
+Nucleus_Object_Library_Export Nucleus_Status
+Nucleus_Types_unloadAllDynamicLibraries
+    (
+    );
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Types_getNumberOfDynamicLibraries
+    (
+        Nucleus_Size *size
+    );
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Types_getDynamicLibrary
+    (
+        Nucleus_Size index,
+        Nucleus_DynamicLibrary **dynamicLibrary
+    );
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
