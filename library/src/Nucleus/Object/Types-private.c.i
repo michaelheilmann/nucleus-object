@@ -89,7 +89,6 @@ uninitialize
         Nucleus_TypeSystem *types
     )
 {
-    Nucleus_Status status;
     // (1) Uninitialize the types.
     Nucleus_Collections_PointerHashMap_Enumerator e;
     Nucleus_Collections_PointerHashMap_Enumerator_initialize(&e, &types->types);

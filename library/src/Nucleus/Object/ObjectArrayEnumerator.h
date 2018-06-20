@@ -5,20 +5,20 @@
 Nucleus_ClassTypeDeclaration(Nucleus_Object_Library_Export,
                              "Nucleus.ObjectArrayEnumerator",
                              Nucleus_ObjectArrayEnumerator,
-                             Nucleus_Object)
+                             Nucleus_ObjectEnumerator)
                              
 #define NUCLEUS_OBJECTARRAYENUMERATOR(p) ((Nucleus_ObjectArrayEnumerator *)(p))
 #define NUCLEUS_OBJECTARRAYENUMERATOR_CLASS(p) ((Nucleus_ObjectArrayEnumerator_Class *)(p))
 
 struct Nucleus_ObjectArrayEnumerator
 {
-    Nucleus_Object parent;
+    Nucleus_ObjectEnumerator parent;
     Nucleus_Collections_PointerArray_Enumerator implementation;
 }; // struct Nucleus_ObjectArray
 
 struct Nucleus_ObjectArrayEnumerator_Class
 {
-    Nucleus_Object_Class parent;
+    Nucleus_ObjectEnumerator_Class parent;
 }; // struct Nucleus_ObjectArrayEnumerator_Class
 
 Nucleus_NonNull() Nucleus_Status

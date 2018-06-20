@@ -19,8 +19,7 @@ Nucleus_DynamicLibrary_construct
     )
 {
     if (Nucleus_Unlikely(!self || !pathname)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Status status;
-    self->pathname = strdup(pathname);
+     self->pathname = strdup(pathname);
     if (Nucleus_Unlikely(!self->pathname))
     {
         return Nucleus_Status_AllocationFailed;

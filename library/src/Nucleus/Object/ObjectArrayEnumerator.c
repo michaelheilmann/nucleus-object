@@ -3,7 +3,7 @@
 Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
                             "Nucleus.ObjectArrayEnumerator",
                             Nucleus_ObjectArrayEnumerator,
-                            Nucleus_Object)
+                            Nucleus_ObjectEnumerator)
 
 Nucleus_NonNull() static Nucleus_Status
 getObject
@@ -96,7 +96,7 @@ Nucleus_ObjectArrayEnumerator_construct
     status = Nucleus_ObjectArrayEnumerator_getType(&type);
     if (Nucleus_Unlikely(status)) return status;
     // (2) Invoke constructor of parent class.
-    Nucleus_Object_construct(NUCLEUS_OBJECT(self));
+    Nucleus_ObjectEnumerator_construct(NUCLEUS_OBJECTENUMERATOR(self));
     // (3) 
     status = Nucleus_Collections_PointerArray_Enumerator_initialize(&self->implementation,
                                                                     &objectArray->implementation);
