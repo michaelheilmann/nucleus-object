@@ -13,23 +13,23 @@
 #include "Nucleus/Object/ImmutableString.h"
 #include <string.h>
 #include <stdio.h>
+#include "Nucleus/Object/Signal-private.c.i"
+#include "Nucleus/Object/Connection-private.c.i"
 
-// `Nucleus_SignalSystem`
-typedef struct Signals Signals;
+#define Nucleus_Signals_Mutex int
+#define Nucleus_Signals_Mutex_Initializer (0)
+#define Nucleus_Signals_Mutex_lock(mutex) /* - */
+#define Nucleus_Signals_Mutex_unlock(mutex) /* - */
+DECLARE_MODULE_PRIVATE(Nucleus_Signals)
 
-#define MUTEX int
-#define MUTEX_INITIALIZER (0)
-#define MUTEX_LOCK(mutex) /* - */
-#define MUTEX_UNLOCK(mutex) /* - */
-
-static MUTEX g_mutexSingleton = MUTEX_INITIALIZER;
-static Signals *g_singleton = NULL;
-
-struct Signals
+struct Nucleus_Signals
 {
     int referenceCount;
+    // A map from signal keys to signals.
     Nucleus_Collections_PointerHashMap signals;
-}; // struct Signals
+    // A map from object connections keys to object connections.
+    Nucleus_Collections_PointerHashMap connections;
+}; // struct Nucleus_Signals
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -95,68 +95,6 @@ lookupInClasses
         Nucleus_Signal **signal,
         Nucleus_ImmutableString *name,
         Nucleus_Type *type
-    );
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-typedef struct Nucleus_Signal
-{
-    Nucleus_ImmutableString *name; // TODO: Add and use Nucleus_Atom.
-    Nucleus_Type *type;
-} Nucleus_Signal;
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_initialize
-    (
-        Nucleus_Signal *signal,
-        Nucleus_ImmutableString *name,
-        Nucleus_Type *type
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_uninitialize
-    (
-        Nucleus_Signal *signal
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_create
-    (
-        Nucleus_Signal **signal,
-        Nucleus_ImmutableString *name,
-        Nucleus_Type *type
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_destroy
-    (
-        Nucleus_Signal *signal
-    );
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-Nucleus_NonNull() static Nucleus_Status
-initialize
-    (
-        Signals *signals
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-uninitialize
-    (
-        Signals *signals
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-create
-    (
-        Signals **signals
-    );
-
-Nucleus_NonNull() static Nucleus_Status
-destroy
-    (
-        Signals *signals
     );
 
 #endif

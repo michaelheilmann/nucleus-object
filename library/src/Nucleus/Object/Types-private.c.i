@@ -1,6 +1,8 @@
 // Copyright (c) 2018 Michael Heilmann
 #include "Nucleus/Object/Types-private.h.i"
 
+DEFINE_MODULE_PRIVATE(Nucleus_Types)
+
 Nucleus_NonNull() static Nucleus_Status
 lockTypeName
     (
@@ -52,14 +54,22 @@ equalToTypeName
 }
 
 Nucleus_NonNull() static Nucleus_Status
-initialize
+__Nucleus_Types_initialize
     (
-        Nucleus_TypeSystem *types
+        Nucleus_Types *module
     )
 {
-    if (Nucleus_Unlikely(!types)) return Nucleus_Status_InvalidArgument;
+    if (Nucleus_Unlikely(!module)) return Nucleus_Status_InvalidArgument;
+    //
     Nucleus_Status status;
-    status = Nucleus_Collections_PointerHashMap_initialize(&types->types, 8,
+    //
+    status = Nucleus_FinalizationHooks_initialize();
+    if (Nucleus_Unlikely(status))
+    {
+        return status;
+    }
+    //
+    status = Nucleus_Collections_PointerHashMap_initialize(&module->types, 8,
                                                            NUCLEUS_LOCKFUNCTION(&lockTypeName),
                                                            NUCLEUS_UNLOCKFUNCTION(&unlockTypeName),
                                                            NUCLEUS_HASHFUNCTION(&hashTypeName), // hash
@@ -68,30 +78,35 @@ initialize
                                                            NUCLEUS_UNLOCKFUNCTION(&unlockType));
     if (Nucleus_Unlikely(status))
     {
+        Nucleus_FinalizationHooks_uninitialize();
         return status; 
     }
-    status = Nucleus_Collections_PointerArray_initialize(&types->dynamicLibraries,
+    //
+    status = Nucleus_Collections_PointerArray_initialize(&module->dynamicLibraries,
                                                          8,
                                                          NUCLEUS_LOCKFUNCTION(&Nucleus_DynamicLibrary_lock),
                                                          NUCLEUS_UNLOCKFUNCTION(&Nucleus_DynamicLibrary_unlock));
     if (Nucleus_Unlikely(status))
     {
-        Nucleus_Collections_PointerHashMap_uninitialize(&types->types);
+        Nucleus_Collections_PointerHashMap_uninitialize(&module->types);
+        Nucleus_FinalizationHooks_uninitialize();
         return status; 
     }
-    types->referenceCount = 1;
+    //
+    module->referenceCount = 1;
+    //
     return Nucleus_Status_Success;
 }
 
 Nucleus_NonNull() static Nucleus_Status
-uninitialize
+__Nucleus_Types_uninitialize
     (
-        Nucleus_TypeSystem *types
+        Nucleus_Types *module
     )
 {
     // (1) Uninitialize the types.
     Nucleus_Collections_PointerHashMap_Enumerator e;
-    Nucleus_Collections_PointerHashMap_Enumerator_initialize(&e, &types->types);
+    Nucleus_Collections_PointerHashMap_Enumerator_initialize(&e, &module->types);
     while (1)
     {
         Nucleus_Boolean hasValue;
@@ -104,131 +119,17 @@ uninitialize
         Nucleus_Type *type;
         Nucleus_Collections_PointerHashMap_Enumerator_getValue(&e, (void **)&typeName,
                                                                    (void **)&type);
-        if (type->notifyShutdown)
-        {
-            type->notifyShutdown();
-        }
+        Nucleus_FinalizationHooks_invoke(type);
         Nucleus_Collections_PointerHashMap_Enumerator_next(&e);
     }
     Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
 
     // (2) Uninitialize the dynamic libraries.
-    Nucleus_Collections_PointerArray_uninitialize(&types->dynamicLibraries);
+    Nucleus_Collections_PointerArray_uninitialize(&module->dynamicLibraries);
     
-    // (3) Return success.
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-create
-    (
-        Nucleus_TypeSystem **typeSystem
-    )
-{
-    if (Nucleus_Unlikely(!typeSystem)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Status status;
-    Nucleus_TypeSystem *temporary;
-    status = Nucleus_allocateMemory((void **)&temporary, sizeof(Nucleus_TypeSystem));
-    if (Nucleus_Unlikely(status)) return status;
-    status = initialize(temporary);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_deallocateMemory(temporary);
-        return status;
-    }
-    *typeSystem = temporary;
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-destroy
-    (
-        Nucleus_TypeSystem *typeSystem
-    )
-{
-    if (Nucleus_Unlikely(!typeSystem)) return Nucleus_Status_InvalidArgument;
-    uninitialize(typeSystem);
-    Nucleus_deallocateMemory(typeSystem);
-    return Nucleus_Status_Success;
-}
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-Nucleus_NonNull() static Nucleus_Status
-createClassType
-    (
-        Nucleus_Type **type,
-        const char *name,
-        Nucleus_Size objectSize,
-        Nucleus_Status (*objectDestructor)(void *object),
-        Nucleus_Size dispatchSize,
-        Nucleus_Status (*dispatchConstructor)(void *dispatch),
-        Nucleus_Type *parentType,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
-    )
-{
-    Nucleus_Status status;
-    Nucleus_Type *temporary;
-    // Allocate the type.
-    status = Nucleus_allocateMemory((void **)&temporary, sizeof(Nucleus_Type));
-    if (Nucleus_Unlikely(status))
-    {
-        return status;
-    }
-    // Store the type name.
-    temporary->name = strdup(name);
-    if (Nucleus_Unlikely(!temporary->name))
-    {
-        Nucleus_deallocateMemory(temporary);
-        return Nucleus_Status_AllocationFailed;
-    }
-    // Store the type name hash.
-    Nucleus_hashMemory(name, strlen(name), &temporary->hashValue);
-    // Store shutdown callback.
-    temporary->notifyShutdown = notifyShutdown;
-    // Store class type specific values.
-    temporary->classType.objectSize = objectSize;
-    temporary->classType.objectDestructor = objectDestructor;
-    temporary->classType.dispatchSize = dispatchSize;
-    temporary->classType.dispatchConstructor = dispatchConstructor;
-    temporary->classType.parentType = parentType;
-    temporary->classType.dispatch = NULL;  
-    // Initialize the dispatch.
-    status = Nucleus_allocateMemory((void **)&(temporary->classType.dispatch),
-                                    temporary->classType.dispatchSize);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_deallocateMemory(temporary->name);
-        temporary->name = NULL;
-        Nucleus_deallocateMemory(temporary);
-        return Nucleus_Status_AllocationFailed;
-    }
-    if (temporary->classType.parentType)
-    {
-        Nucleus_copyMemory((void *)temporary->classType.dispatch,
-                           (void *)temporary->classType.parentType->classType.dispatch,
-                           temporary->classType.parentType->classType.dispatchSize);
-    }
-    if (temporary->classType.dispatchConstructor)
-    {
-        temporary->classType.dispatchConstructor(temporary->classType.dispatch);
-    }
-    // Return result.
-    *type = temporary;
-    // Return success.
-    return Nucleus_Status_Success;
-}
- 
-Nucleus_NonNull() static Nucleus_Status
-destroyClassType
-    (
-        Nucleus_Type *type
-    )
-{
-    Nucleus_deallocateMemory(type->classType.dispatch);
-    type->classType.dispatch = NULL;
-    Nucleus_deallocateMemory(type->name);
-    type->name = NULL;
-    Nucleus_deallocateMemory(type);
+    // (4) Uninitialize the finalization hooks.
+    Nucleus_FinalizationHooks_uninitialize();
+    
+    // (5) Return success.
     return Nucleus_Status_Success;
 }

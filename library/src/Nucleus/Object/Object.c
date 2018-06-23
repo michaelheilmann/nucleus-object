@@ -1,9 +1,5 @@
 // Copyright (c) 2018 Michael Heilmann
-#include "Nucleus/Object/Object.h"
-
-#include "Nucleus/Object/Types.h"
-#include "Nucleus/Memory.h"
-#include "Nucleus/Hash/Pointer.h"
+#include "Nucleus/Object/Object.c.i"
 
 Nucleus_NonNull() static Nucleus_Status
 equalTo
@@ -209,3 +205,5 @@ Nucleus_Object_hash
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
     return NUCLEUS_OBJECT_CLASS(self->type->classType.dispatch)->hash(self, hashValue);
 }
+
+DEFINE_MODULE(Nucleus_Objects)

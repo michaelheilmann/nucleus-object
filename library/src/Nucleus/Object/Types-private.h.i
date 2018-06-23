@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Nucleus/Object/Types.h"
+#include "Nucleus/Object/FinalizationHooks.h"
 #include "Nucleus/Memory.h"
 #include "Nucleus/Collections/PointerArray.h"
 #include "Nucleus/Collections/PointerHashMap.h"
@@ -18,69 +19,54 @@
     #error("operating system not supported")
 #endif
 
+#define Nucleus_Types_Mutex int
+#define Nucleus_Types_Mutex_Initializer (0)
+#define Nucleus_Types_Mutex_lock(mutex) /* - */
+#define Nucleus_Types_Mutex_unlock(mutex) /* - */
+DECLARE_MODULE_PRIVATE(Nucleus_Types)
 
-// `Nucleus_TypeSystem`
-typedef struct Nucleus_TypeSystem Nucleus_TypeSystem;
-
-// The mutex implementation.
-#define MUTEX int
-#define MUTEX_INITIALIZER (0)
-#define MUTEX_LOCK(mutex) /* - */
-#define MUTEX_UNLOCK(mutex) /* - */
-
-static MUTEX g_mutexSingleton = MUTEX_INITIALIZER;
-static Nucleus_TypeSystem *g_singleton = NULL;
-
-struct Nucleus_TypeSystem
+struct Nucleus_Types
 {
     int referenceCount;
     Nucleus_Collections_PointerHashMap types;
     Nucleus_Collections_PointerArray dynamicLibraries;
-}; // struct Nucleus_TypeSystem
+}; // struct Nucleus_Types
 
 Nucleus_NonNull() static Nucleus_Status
-initialize
+lockTypeName
     (
-        Nucleus_TypeSystem *typeSystem
+        char *typeName
     );
 
 Nucleus_NonNull() static Nucleus_Status
-uninitialize
+unlockTypeName
     (
-        Nucleus_TypeSystem *typeSystem
+        char *typeName
     );
 
 Nucleus_NonNull() static Nucleus_Status
-create
+lockType
     (
-        Nucleus_TypeSystem **typeSystem
+        Nucleus_Type *p
     );
 
 Nucleus_NonNull() static Nucleus_Status
-destroy
+unlockType
     (
-        Nucleus_TypeSystem *typeSystem
+        Nucleus_Type *p
     );
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 Nucleus_NonNull() static Nucleus_Status
-createClassType
+hashTypeName
     (
-        Nucleus_Type **type,
-        const char *name,
-        Nucleus_Size objectSize,
-        Nucleus_Status (*objectDestructor)(void *object),
-        Nucleus_Size dispatchSize,
-        Nucleus_Status (*dispatchConstructor)(void *dispatch),
-        Nucleus_Type *parentType,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
-    );
- 
-Nucleus_NonNull() static Nucleus_Status
-destroyClassType
-    (
-        Nucleus_Type *type
+        const char *p,
+        Nucleus_HashValue *hashValue
     );
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+Nucleus_NonNull() static Nucleus_Status
+equalToTypeName
+    (
+        const char *p,
+        const char *q,
+        Nucleus_Boolean *equalTo
+    );

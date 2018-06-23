@@ -1,6 +1,8 @@
 // Copyright (c) 2018 Michael Heilmann
 #include "Nucleus/Object/Types-private.c.i"
 
+DEFINE_MODULE(Nucleus_Types)
+
 Nucleus_NonNull() Nucleus_Status
 Nucleus_Type_hash
     (
@@ -10,49 +12,6 @@ Nucleus_Type_hash
 {
     if (Nucleus_Unlikely(!type || !hashValue)) return Nucleus_Status_InvalidArgument;
     *hashValue = type->hashValue;
-    return Nucleus_Status_Success;
-}
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-Nucleus_Status
-Nucleus_Types_initialize
-    (
-    )
-{
-    MUTEX_LOCK(&g_singletonMutex);
-    if (NULL != g_singleton)
-    {
-        g_singleton->referenceCount++;
-        MUTEX_UNLOCK(&g_singletonMutex);
-        return Nucleus_Status_Success;
-    }
-    else
-    {
-        Nucleus_Status status = create(&g_singleton);
-        MUTEX_UNLOCK(&g_singletonMutex);
-        return status;
-    }
-}
-
-Nucleus_Status
-Nucleus_Types_uninitialize
-    (
-    )
-{
-    MUTEX_LOCK(&g_singletonMutex);
-    if (NULL == g_singleton)
-    {
-        MUTEX_UNLOCK(&g_singletonMutex);
-        return Nucleus_Status_NotExists;
-    }
-    if (0 == --g_singleton->referenceCount)
-    {
-        destroy(g_singleton);
-        g_singleton = NULL;
-        MUTEX_UNLOCK(&g_singletonMutex);
-        return Nucleus_Status_Success;
-    }
     return Nucleus_Status_Success;
 }
 
@@ -68,13 +27,13 @@ Nucleus_Types_addClassType
         Nucleus_Size dispatchSize,
         Nucleus_Status (*dispatchConstructor)(void *dispatch),
         Nucleus_Type *parentType,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
+        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)(Nucleus_Type *)
     )
 {
-    MUTEX_LOCK(&g_singletonMutex);
+    Nucleus_Types_Mutex_lock(&g_singletonMutex);
     if (!g_singleton)
     {
-        MUTEX_UNLOCK(&g_singletonMutex);
+        Nucleus_Types_Mutex_unlock(&g_singletonMutex);
         return Nucleus_Status_NotInitialized;
     }
 
@@ -87,7 +46,7 @@ Nucleus_Types_addClassType
                                                     (void **)&type1);
     if (Nucleus_Unlikely(status && status != Nucleus_Status_NotExists))
     {
-        MUTEX_UNLOCK(&g_singletonMutex);
+        Nucleus_Types_Mutex_unlock(&g_singletonMutex);
         return status;
     }
     // Create the type.
@@ -96,7 +55,14 @@ Nucleus_Types_addClassType
                                            parentType, notifyShutdown);
     if (Nucleus_Unlikely(status))
     {
-        MUTEX_UNLOCK(&g_singletonMutex);
+        Nucleus_Types_Mutex_unlock(&g_singletonMutex);
+        return status;
+    }
+    // Registers the finalization hook.
+    status = Nucleus_FinalizationHooks_add(type1, NUCLEUS_CALLBACK(notifyShutdown));
+    if (Nucleus_Unlikely(status))
+    {
+        destroyClassType(type1);
         return status;
     }
     // Add the type.
@@ -104,15 +70,16 @@ Nucleus_Types_addClassType
                                                     Nucleus_Boolean_False); 
     if (Nucleus_Unlikely(status))
     {
+        Nucleus_FinalizationHooks_removeAll(type);
         destroyClassType(type1);
-        MUTEX_UNLOCK(&g_singletonMutex);
+        Nucleus_Types_Mutex_unlock(&g_singletonMutex);
         return status;       
     }
 
     // Return the type.
     *type = type1;
 
-    MUTEX_UNLOCK(&g_singletonMutex);
+    Nucleus_Types_Mutex_unlock(&g_singletonMutex);
 
     // Return success.
     return Nucleus_Status_Success;
@@ -192,7 +159,5 @@ Nucleus_Types_getDynamicLibrary
     return Nucleus_Collections_PointerArray_at(&g_singleton->dynamicLibraries, index,
                                                (void **)dynamicLibrary);
 }
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif
