@@ -11,10 +11,10 @@
 #include "Nucleus/Hash/combineHashValues.h"
 #include "Nucleus/Object/String.h"
 #include "Nucleus/Object/ImmutableString.h"
-#include <string.h>
-#include <stdio.h>
 #include "Nucleus/Object/Signal-private.c.i"
 #include "Nucleus/Object/Connection-private.c.i"
+#include <string.h>
+#include <stdio.h>
 
 #define Nucleus_Signals_Mutex int
 #define Nucleus_Signals_Mutex_Initializer (0)
@@ -93,6 +93,13 @@ Nucleus_NonNull() static Nucleus_Status
 lookupInClasses
     (
         Nucleus_Signal **signal,
+        Nucleus_ImmutableString *name,
+        Nucleus_Type *type
+    );
+
+Nucleus_NonNull() static Nucleus_Status
+addSignal
+    (
         Nucleus_ImmutableString *name,
         Nucleus_Type *type
     );

@@ -1,7 +1,7 @@
 #include "Nucleus/Object/ObjectArrayEnumerator.h"
 
 Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
-                            "Nucleus.ObjectArrayEnumerator",
+                            u8"Nucleus.ObjectArrayEnumerator",
                             Nucleus_ObjectArrayEnumerator,
                             Nucleus_ObjectEnumerator)
 
@@ -36,6 +36,13 @@ constructDispatch
     NUCLEUS_OBJECTENUMERATOR_CLASS(dispatch)->nextObject = &nextObject;
     return Nucleus_Status_Success;
 }
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+constructSignals
+    (
+        Nucleus_ObjectArrayEnumerator_Class *dispatch
+    )
+{ return Nucleus_Status_Success; }
 
 Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
 destruct
@@ -106,31 +113,6 @@ Nucleus_ObjectArrayEnumerator_construct
     return Nucleus_Status_Success;
 }
 
-Nucleus_NonNull() Nucleus_Status
-Nucleus_ObjectArrayEnumerator_create
-    (
-        Nucleus_ObjectArrayEnumerator **objectArrayEnumerator,
-        Nucleus_ObjectArray *objectArray
-    )
-{
-    // Validate arguments.
-    if (Nucleus_Unlikely(!objectArrayEnumerator)) return Nucleus_Status_InvalidArgument;
-    // Local variables.
-    Nucleus_ObjectArrayEnumerator *temporary;
-    Nucleus_Status status;
-    // Allocate object.
-    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
-                                     sizeof(Nucleus_ObjectArrayEnumerator));
-    if (Nucleus_Unlikely(status)) return status;
-    // Construct object.
-    status = Nucleus_ObjectArrayEnumerator_construct(temporary, objectArray);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
-        return status;
-    }
-    // Return object.
-    *objectArrayEnumerator = temporary;
-    // Return success.
-    return Nucleus_Status_Success;
-}
+Nucleus_DefineCreate(Nucleus_ObjectArrayEnumerator,
+                     Nucleus_Parameters(Nucleus_ObjectArray *objectArray),
+					 Nucleus_Arguments(objectArray))

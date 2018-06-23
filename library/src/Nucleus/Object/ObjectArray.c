@@ -2,12 +2,19 @@
 #include "Nucleus/Object/ObjectArrayEnumerator.h"
 
 Nucleus_ClassTypeDefinition(Nucleus_Object_Library_Export,
-                            "Nucleus.ObjectArray",
+                            u8"Nucleus.ObjectArray",
                             Nucleus_ObjectArray,
                             Nucleus_Object)
 
 Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
 constructDispatch
+    (
+        Nucleus_ObjectArray_Class *dispatch
+    )
+{ return Nucleus_Status_Success; }
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+constructSignals
     (
         Nucleus_ObjectArray_Class *dispatch
     )
@@ -45,33 +52,7 @@ Nucleus_ObjectArray_construct
     return Nucleus_Status_Success;
 }
 
-Nucleus_NonNull() Nucleus_Status
-Nucleus_ObjectArray_create
-    (
-        Nucleus_ObjectArray **objectArray
-    )
-{
-    // Validate arguments.
-    if (Nucleus_Unlikely(!objectArray)) return Nucleus_Status_InvalidArgument;
-    // Local variables.
-    Nucleus_ObjectArray *temporary;
-    Nucleus_Status status;
-    // Allocate object.
-    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
-                                     sizeof(Nucleus_ObjectArray));
-    if (Nucleus_Unlikely(status)) return status;
-    // Construct object.
-    status = Nucleus_ObjectArray_construct(temporary);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
-        return status;
-    }
-    // Return object.
-    *objectArray = temporary;
-    // Return success.
-    return Nucleus_Status_Success;
-}
+Nucleus_DefineDefaultCreate(Nucleus_ObjectArray)
 
 Nucleus_NonNull() Nucleus_Status
 Nucleus_ObjectArray_increaseCapacity
@@ -185,4 +166,3 @@ Nucleus_ObjectArray_getEnumerator
 {
     return Nucleus_ObjectArrayEnumerator_create((Nucleus_ObjectArrayEnumerator **)enumerator, self);
 }
-

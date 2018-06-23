@@ -29,7 +29,7 @@ unlockType
     (
         Nucleus_Type *p
     )
-{ return destroyClassType(p); }
+{ return Nucleus_Type_destroy(p); }
 
 Nucleus_NonNull() static Nucleus_Status
 hashTypeName

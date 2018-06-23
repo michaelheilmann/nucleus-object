@@ -25,10 +25,14 @@ DECLARE_MODULE(Nucleus_Signals)
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
 Nucleus_Signals_addSignal
     (
-        Nucleus_Signal **signal,
         const char *name,
-        Nucleus_Type *type,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
+        Nucleus_Type *type
+    );
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Signals_removeAllSignals
+    (
+        Nucleus_Type *type
     );
 
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status

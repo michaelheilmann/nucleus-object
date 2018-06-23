@@ -5,6 +5,53 @@
 
 DEFINE_MODULE_PRIVATE(Nucleus_Signals)
 
+Nucleus_NonNull() static Nucleus_Status
+addSignal
+    (
+        Nucleus_ImmutableString *name,
+        Nucleus_Type *type
+    )
+{
+    Nucleus_Status status;
+    // Search the class for the signal.
+    Nucleus_Signal *s;
+    status = lookupInClasses(&s, name, type);
+    if (Nucleus_Unlikely(status))
+    {
+        return status;
+    }
+    if (s)
+    {
+        fprintf(stderr, u8"%s:%d: signal already exists\n", __FILE__, __LINE__);
+        return Nucleus_Status_Exists;
+    }
+    // The signal does not exist. Create it, add it.
+    status = Signal_create(&s, name, type);
+    if (Nucleus_Unlikely(status))
+    {
+        return status;
+    }
+    SignalKey *k;
+    status = SignalKey_create(&k, name, type);
+    if (Nucleus_Unlikely(status))
+    {
+        Signal_destroy(s);
+        return status;
+    }
+    status = Nucleus_Collections_PointerHashMap_set(&g_singleton->signals,
+                                                    (void *)k, (void *)s,
+                                                    Nucleus_Boolean_False);
+    if (Nucleus_Unlikely(status))
+    {
+        SignalKey_destroy(k);
+        Signal_destroy(s);
+        return status;
+    }
+
+    // Return success.
+    return Nucleus_Status_Success;
+}
+
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 Nucleus_NonNull() static Nucleus_Status
@@ -142,7 +189,7 @@ lookupInClasses
                                                         (void **)&temporary);
         if (status == Nucleus_Status_NotExists)
         { 
-            type = type->classType.parentType;
+            type = NUCLEUS_CLASSTYPE(type)->parentType;
             SignalKey_destroy(key);
             if (!type)
             {
@@ -187,6 +234,7 @@ __Nucleus_Signals_initialize
     if (Nucleus_Unlikely(status)) return status;
     // A signal key is a lightweight structure consisting of the signal name and the signal type.
     // The hash value computed from the signal name and the signal type is cached in the signal key.
+	fprintf(stdout, "initializing signal hash map\n");
     status = Nucleus_Collections_PointerHashMap_initialize(&module->signals,
                                                            8,
                                                            NULL,
@@ -201,6 +249,7 @@ __Nucleus_Signals_initialize
         return status; 
     }
     //
+	fprintf(stdout, "initializing connections hash map\n");
     status = Nucleus_Collections_PointerHashMap_initialize(&module->connections,
                                                            8,
                                                            NULL,

@@ -31,7 +31,7 @@ Nucleus_Type_hash
 #if defined(Nucleus_WithClassTypes) && 1 == Nucleus_WithClassTypes
 
 // Add a class type.
-Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Object_Library_Export Nucleus_NonNull(1, 2) Nucleus_Status
 Nucleus_Types_addClassType
     (
         Nucleus_Type **type,
@@ -39,7 +39,8 @@ Nucleus_Types_addClassType
         Nucleus_Size objectSize,
         Nucleus_Status(*objectDestructor)(void *object),
         Nucleus_Size classSize,
-        Nucleus_Status(*dispatchConstructor)(void *dispatch),
+        Nucleus_Status (*dispatchConstructor)(void *dispatch),
+		Nucleus_Status (*signalsConstructor)(void *dispatch),
         Nucleus_Type *parentType,
         Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)(Nucleus_Type *)
     );
@@ -61,11 +62,23 @@ Nucleus_Types_addClassType
 #define Nucleus_ClassTypeDefinition(Visibility, Name, NameCxx, ParentNameCxx) \
     static Nucleus_Type *g_type = NULL; \
 \
+	Nucleus_NoWarnUnused() Nucleus_NonNull() static NameCxx##_Class * \
+	getDispatch \
+		( \
+			NameCxx *self \
+		); \
+\
     Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status \
     constructDispatch \
         ( \
             NameCxx##_Class *dispatch \
         ); \
+\
+	Nucleus_NonNull() static Nucleus_Status \
+	constructSignals \
+		( \
+			NameCxx##_Class *dispatch \
+		); \
 \
     Nucleus_AlwaysSucceed() static Nucleus_Status \
     notifyShutdown \
@@ -109,13 +122,23 @@ Nucleus_Types_addClassType
                                                 (Nucleus_Status (*)(void *))&destruct, \
                                                 sizeof(NameCxx##_Class), \
                                                 (Nucleus_Status (*)(void *))&constructDispatch, \
+												(Nucleus_Status (*)(void *))&constructSignals, \
                                                 parentType, \
                                                 &notifyShutdown); \
             if (Nucleus_Unlikely(status)) return status; \
         } \
         *type = g_type; \
         return Nucleus_Status_Success; \
-    }
+    } \
+\
+	Nucleus_NoWarnUnused() Nucleus_NonNull() static NameCxx##_Class * \
+	getDispatch \
+		( \
+			NameCxx *self \
+		) \
+	{ \
+		return NUCLEUS_CAST(NameCxx##_Class *,NUCLEUS_CAST(Nucleus_ClassType *, NUCLEUS_CAST(Nucleus_Object *, self)->type)->dispatch); \
+	}
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
