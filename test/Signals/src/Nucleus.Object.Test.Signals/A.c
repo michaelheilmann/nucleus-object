@@ -37,3 +37,30 @@ A_construct
     NUCLEUS_OBJECT(self)->type = type;
     return Nucleus_Status_Success;
 }
+
+Nucleus_NonNull() Nucleus_Status
+A_create
+    (
+        A **a
+    )
+{
+    // Validate arguments.
+    if (Nucleus_Unlikely(!a)) return Nucleus_Status_InvalidArgument;
+    Nucleus_Status status;
+    A *temporary;
+    // Allocate object.
+    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
+                                     sizeof(A));
+    if (Nucleus_Unlikely(status)) return status;
+    // Construct object.
+    status = A_construct(temporary);
+    if (Nucleus_Unlikely(status))
+    {
+        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
+        return status;
+    }
+    // Return object.
+    *a = temporary;
+    // Return success.
+    return Nucleus_Status_Success;
+}

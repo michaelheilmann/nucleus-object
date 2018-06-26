@@ -28,3 +28,9 @@ A_construct
     (
         A *self
     );
+
+Nucleus_NonNull() Nucleus_Status
+A_create
+    (
+        A **a
+    );

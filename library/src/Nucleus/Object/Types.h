@@ -6,6 +6,9 @@
 #include "Nucleus/Types/HashValue.h"
 #include "Nucleus/Types/Size.h"
 #include "Nucleus/Object/Exports.h"
+#include "Nucleus/Object/Type.h"
+#include "Nucleus/Object/Module.h"
+#include <assert.h>
 
 // Class types are supported if this is defined and 1.
 #define Nucleus_WithClassTypes (1)
@@ -14,34 +17,7 @@
 // `Nucleus_DynamicLibrary`
 typedef struct Nucleus_DynamicLibrary Nucleus_DynamicLibrary;
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-// `Nucleus_Type`
-typedef struct Nucleus_Type Nucleus_Type;
-
-typedef struct ClassType ClassType;
-
-struct ClassType
-{
-    Nucleus_Size objectSize;
-    Nucleus_Status (*objectDestructor)(void *object);
-    
-    Nucleus_Size dispatchSize;
-    Nucleus_Status (*dispatchConstructor)(void *dispatch);
-    
-    Nucleus_Type *parentType;
-    
-    void *dispatch;
-    
-}; // struct ClassType
-
-struct Nucleus_Type
-{
-    char *name;
-    Nucleus_HashValue hashValue;
-    Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)();
-    ClassType classType;
-}; // struct Nucleus_Type
+DECLARE_MODULE(Nucleus_Types)
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -50,41 +26,6 @@ Nucleus_Type_hash
     (
         Nucleus_Type *type,
         Nucleus_HashValue *hashValue
-    );
-
-// # `Nucleus_Types_initialize`
-// *Startup the `Nucleus_Types` singleton.*
-// ## C Signature
-// ```
-// Nucleus_Status
-// Nucleus_Types_initialize
-//     (
-//     );
-// ```
-// ## Description
-// If the `Nucleus_Types` singleton does exist, `Nucleus_Status_Exists` is returned.
-// If it does not exist, then it is created.
-// If the creation fails, a non-zero status code is returned.
-Nucleus_Object_Library_Export Nucleus_Status
-Nucleus_Types_initialize
-    (
-    );
-
-// # `Nucleus_Types_uninitialize`
-// *Shutdown the `Nucleus_Types` singleton.*
-// ## C Signature
-// ```
-// Nucleus_Status
-// Nucleus_Types_uninitialize
-//     (
-//     );
-// ```
-// ## Description
-// If the `Nucleus_Types` singleton does not exist, `Nucleus_Status_NotExists` is returned.
-// If it does exist, it is destroyed.
-Nucleus_Object_Library_Export Nucleus_Status
-Nucleus_Types_uninitialize
-    (
     );
 
 #if defined(Nucleus_WithClassTypes) && 1 == Nucleus_WithClassTypes
@@ -100,7 +41,7 @@ Nucleus_Types_addClassType
         Nucleus_Size classSize,
         Nucleus_Status(*dispatchConstructor)(void *dispatch),
         Nucleus_Type *parentType,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
+        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)(Nucleus_Type *)
     );
 
 #endif
@@ -129,6 +70,7 @@ Nucleus_Types_addClassType
     Nucleus_AlwaysSucceed() static Nucleus_Status \
     notifyShutdown \
         ( \
+            Nucleus_Type *type \
         ); \
 \
     Nucleus_AlwaysSucceed() static Nucleus_Status \
@@ -140,8 +82,10 @@ Nucleus_Types_addClassType
     Nucleus_AlwaysSucceed() static Nucleus_Status \
     notifyShutdown \
         ( \
+            Nucleus_Type *type \
         ) \
     { \
+        assert(type == g_type); \
         g_type = NULL; \
         return Nucleus_Status_Success; \
     } \

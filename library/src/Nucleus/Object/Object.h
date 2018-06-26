@@ -7,9 +7,12 @@
 #include "Nucleus/Types/HashValue.h"
 #include "Nucleus/Types/Size.h"
 #include "Nucleus/Object/Exports.h"
+#include "Nucleus/Object/Module.h"
 
 // Forward declaration.
 typedef struct Nucleus_Type Nucleus_Type;
+
+DECLARE_MODULE(Nucleus_Objects)
 
 #define NUCLEUS_OBJECT(p) ((Nucleus_Object *)(p))
 typedef struct Nucleus_Object Nucleus_Object;

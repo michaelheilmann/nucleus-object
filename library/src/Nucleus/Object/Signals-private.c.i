@@ -3,6 +3,8 @@
 
 #if defined(Nucleus_WithSignals) && 1 == Nucleus_WithSignals
 
+DEFINE_MODULE_PRIVATE(Nucleus_Signals)
+
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 Nucleus_NonNull() static Nucleus_Status
@@ -13,9 +15,11 @@ SignalKey_equalTo
         Nucleus_Boolean *equalTo
     )
 {
+    if (left == right)
+    { *equalTo = Nucleus_Boolean_True; return Nucleus_Status_Success; }
     if (left->type != right->type || left->hashValue != right->hashValue)
     { *equalTo = Nucleus_Boolean_False; return Nucleus_Status_Success; }
-    return Nucleus_Object_equalTo(NUCLEUS_OBJECT(left->name), NUCLEUS_OBJECT(right->name), equalTo);
+    return Nucleus_ImmutableString_equalTo(left->name, right->name, equalTo);
 }
 
 Nucleus_NonNull() static Nucleus_Status
@@ -39,11 +43,11 @@ SignalKey_initialize
 {
     //
     signalKey->name = name;
-    Nucleus_Object_incrementReferenceCount(NUCLEUS_OBJECT(name));
-    Nucleus_Object_hash(NUCLEUS_OBJECT(name), &signalKey->typeHashValue);
+    Nucleus_ImmutableString_lock(name);
+    Nucleus_ImmutableString_hash(name, &signalKey->nameHashValue);
     //
     signalKey->type = type;
-    Nucleus_Type_hash(type, &signalKey->hashValue);
+    Nucleus_Type_hash(type, &signalKey->typeHashValue);
     //
     Nucleus_combineHashValues(signalKey->nameHashValue,
                               signalKey->typeHashValue,
@@ -63,7 +67,7 @@ SignalKey_uninitialize
     signalKey->type = NULL;   
     //
     signalKey->nameHashValue = 0;
-    Nucleus_Object_incrementReferenceCount(NUCLEUS_OBJECT(signalKey->name));
+    Nucleus_ImmutableString_unlock(signalKey->name);
     signalKey->name = NULL;
     //
     signalKey->hashValue = 0;
@@ -171,89 +175,19 @@ lookupInClasses
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 Nucleus_NonNull() static Nucleus_Status
-Signal_initialize
+__Nucleus_Signals_initialize
     (
-        Nucleus_Signal *signal,
-        Nucleus_ImmutableString *name,
-        Nucleus_Type *type
+        Nucleus_Signals *module
     )
 {
-    //
-    signal->name = name;
-    Nucleus_Object_incrementReferenceCount(NUCLEUS_OBJECT(name));
-    //
-    signal->type = type;
-    //
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_uninitialize
-    (
-        Nucleus_Signal *signal
-    )
-{
-    //
-    signal->type = NULL;   
-    //
-    Nucleus_Object_incrementReferenceCount(NUCLEUS_OBJECT(signal->name));
-    signal->name = NULL;
-    //
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_create
-    (
-        Nucleus_Signal **signal,
-        Nucleus_ImmutableString *name,
-        Nucleus_Type *type
-    )
-{
+    if (Nucleus_Unlikely(!module)) return Nucleus_Status_InvalidArgument;
     Nucleus_Status status;
-
-    Nucleus_Signal *temporary;
-
-    status = Nucleus_allocateMemory((void **)&temporary, sizeof(Nucleus_Signal));
-    if (Nucleus_Unlikely(status))
-    { return status; }
-
-    status = Signal_initialize(temporary, name, type);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_deallocateMemory(temporary);
-        return status;
-    }
-
-    *signal = temporary;
-
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-Signal_destroy
-    (
-        Nucleus_Signal *signal
-    )
-{
-    Signal_uninitialize(signal);
-    Nucleus_deallocateMemory(signal);
-    return Nucleus_Status_Success;
-}
-
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-Nucleus_NonNull() static Nucleus_Status
-initialize
-    (
-        Signals *signals
-    )
-{
-    if (Nucleus_Unlikely(!signals)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Status status;
+    //
+    status = Nucleus_Types_initialize();
+    if (Nucleus_Unlikely(status)) return status;
     // A signal key is a lightweight structure consisting of the signal name and the signal type.
     // The hash value computed from the signal name and the signal type is cached in the signal key.
-    status = Nucleus_Collections_PointerHashMap_initialize(&signals->signals,
+    status = Nucleus_Collections_PointerHashMap_initialize(&module->signals,
                                                            8,
                                                            NULL,
                                                            NUCLEUS_UNLOCKFUNCTION(&SignalKey_destroy),
@@ -263,54 +197,39 @@ initialize
                                                            NUCLEUS_UNLOCKFUNCTION(&Signal_destroy));
     if (Nucleus_Unlikely(status))
     {
+        Nucleus_Types_uninitialize();
         return status; 
     }
     //
-    signals->referenceCount = 1;
+    status = Nucleus_Collections_PointerHashMap_initialize(&module->connections,
+                                                           8,
+                                                           NULL,
+                                                           NULL,
+                                                           NUCLEUS_HASHFUNCTION(&Nucleus_Object_hash), // hash
+                                                           NUCLEUS_EQUALTOFUNCTION(&Nucleus_Object_equalTo), // equal
+                                                           NULL,
+                                                           NUCLEUS_UNLOCKFUNCTION(&Connections_destroy));
+    if (Nucleus_Unlikely(status))
+    {
+        Nucleus_Collections_PointerHashMap_uninitialize(&module->signals);
+        Nucleus_Types_uninitialize();
+        return status; 
+    }
+    //
+    module->referenceCount = 1;
     //
     return Nucleus_Status_Success;
 }
 
 Nucleus_NonNull() static Nucleus_Status
-uninitialize
+__Nucleus_Signals_uninitialize
     (
-        Signals *signals
+        Nucleus_Signals *module
     )
 {
-    Nucleus_Collections_PointerHashMap_uninitialize(&signals->signals); // Must not fail.
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-create
-    (
-        Signals **signals
-    )
-{
-    if (Nucleus_Unlikely(!signals)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Status status;
-    Signals *temporary;
-    status = Nucleus_allocateMemory((void **)&temporary, sizeof(Signals));
-    if (Nucleus_Unlikely(status)) return status;
-    status = initialize(temporary);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_deallocateMemory(temporary);
-        return status;
-    }
-    *signals = temporary;
-    return Nucleus_Status_Success;
-}
-
-Nucleus_NonNull() static Nucleus_Status
-destroy
-    (
-        Signals *signals
-    )
-{
-    if (Nucleus_Unlikely(!signals)) return Nucleus_Status_InvalidArgument;
-    uninitialize(signals);
-    Nucleus_deallocateMemory(signals);
+    Nucleus_Collections_PointerHashMap_uninitialize(&module->connections); // Must not fail.
+    Nucleus_Collections_PointerHashMap_uninitialize(&module->signals); // Must not fail.
+    Nucleus_Types_uninitialize();
     return Nucleus_Status_Success;
 }
 
