@@ -25,7 +25,7 @@ nextObject
         Nucleus_ObjectEnumerator *self
     );
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructDispatch
     (
         Nucleus_ObjectArrayEnumerator_Class *dispatch
@@ -37,7 +37,7 @@ constructDispatch
     return Nucleus_Status_Success;
 }
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructSignals
     (
         Nucleus_ObjectArrayEnumerator_Class *dispatch

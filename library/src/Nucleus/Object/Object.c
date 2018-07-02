@@ -28,7 +28,7 @@ destroy
         Nucleus_Object *self
     );
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructDispatch
     (
         Nucleus_Object_Class *dispatch
@@ -88,7 +88,7 @@ destroy
     return Nucleus_Status_Success;
 }
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructDispatch
     (
         Nucleus_Object_Class *dispatch
