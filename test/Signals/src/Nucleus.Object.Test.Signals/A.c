@@ -7,14 +7,14 @@ Nucleus_ClassTypeDefinition(Export,
                             A,
                             Nucleus_Object)
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructDispatch
     (
         A_Class *dispatch
     )
 { return Nucleus_Status_Success; }
 
-Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+Nucleus_NonNull() static Nucleus_Status
 constructSignals
     (
         A_Class *dispatch

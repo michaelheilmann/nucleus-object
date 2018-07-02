@@ -68,7 +68,7 @@ Nucleus_Types_addClassType
 			NameCxx *self \
 		); \
 \
-    Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status \
+    Nucleus_NonNull() static Nucleus_Status \
     constructDispatch \
         ( \
             NameCxx##_Class *dispatch \
