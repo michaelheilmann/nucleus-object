@@ -37,6 +37,14 @@ constructDispatch
 }
 
 Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+constructSignals
+    (
+        Nucleus_String_Class *dispatch
+    )
+{ return Nucleus_Status_Success; }
+
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
 destruct
     (
         Nucleus_String *self
@@ -114,29 +122,6 @@ Nucleus_String_construct
     return Nucleus_Status_Success;
 }
 
-Nucleus_NonNull() Nucleus_Status
-Nucleus_String_create
-    (
-        Nucleus_String **string,
-        const char *bytes
-    )
-{
-    if (Nucleus_Unlikely(!string || !bytes)) return Nucleus_Status_InvalidArgument;
-    Nucleus_String *temporary;
-    Nucleus_Status status;
-    //
-    status = Nucleus_Object_allocate((Nucleus_Object **)&temporary,
-                                     sizeof(Nucleus_String));
-    if (Nucleus_Unlikely(status)) return status;
-    //
-    status = Nucleus_String_construct(temporary, bytes);
-    if (Nucleus_Unlikely(status))
-    {
-        Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary));
-        return status;
-    }
-    //
-    *string = temporary;
-    //
-    return Nucleus_Status_Success;
-}
+Nucleus_DefineCreate(Nucleus_String,
+                     Nucleus_Parameters(const char *bytes),
+                     Nucleus_Arguments(bytes))

@@ -1,5 +1,6 @@
 // Copyright (c) 2018 Michael Heilmann
 #include "Nucleus/Object/Object.c.i"
+#include <stdio.h>
 
 Nucleus_NonNull() static Nucleus_Status
 equalTo
@@ -77,11 +78,11 @@ destroy
     while (self->type)
     {
         Nucleus_Type *type = self->type;
-        if (type->classType.objectDestructor)
+        if (NUCLEUS_CLASSTYPE(type)->objectDestructor)
         {
-            type->classType.objectDestructor(self);
+            NUCLEUS_CLASSTYPE(type)->objectDestructor(self);
         }
-        self->type = type->classType.parentType;
+        self->type = NUCLEUS_CLASSTYPE(type)->parentType;
     }
     Nucleus_deallocateMemory(self);
     return Nucleus_Status_Success;
@@ -102,16 +103,62 @@ Nucleus_NonNull() Nucleus_Status
 Nucleus_Object_allocate
     (
         Nucleus_Object **object,
-        Nucleus_Size size
+		Nucleus_Type *type
     )
 {
+	if (Nucleus_Unlikely(!object))
+	{
+		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == object");
+		return Nucleus_Status_InvalidArgument;
+	}
+	if (Nucleus_Unlikely(!type))
+	{
+		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == type");
+		return Nucleus_Status_InvalidArgument;
+	}
+	if (type->kind != Nucleus_TypeKind_Class)
+	{
+		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "not a class type");
+		return Nucleus_Status_InvalidArgument;
+	}
+
+	Nucleus_ClassType *classType = NUCLEUS_CLASSTYPE(type);
+	if (classType->parentType)
+	{
+		Nucleus_ClassType *parentClassType = NUCLEUS_CLASSTYPE(classType->parentType);
+		if (Nucleus_Unlikely(classType->objectSize < parentClassType->objectSize))
+		{
+			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
+			return Nucleus_Status_InvalidArgument;
+		}
+		if (Nucleus_Unlikely(classType->dispatchSize < parentClassType->dispatchSize))
+		{
+			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
+			return Nucleus_Status_InvalidArgument;
+		}
+	}
+	else
+	{
+		if (Nucleus_Unlikely(classType->objectSize < sizeof(Nucleus_Object)))
+		{
+			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
+			return Nucleus_Status_InvalidArgument;
+		}
+		if (Nucleus_Unlikely(classType->dispatchSize < sizeof(Nucleus_Object_Class)))
+		{
+			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
+			return Nucleus_Status_InvalidArgument;
+		}
+	}
+
     Nucleus_Status status;
+	
+	status = Nucleus_ClassType_initialize(classType);
+	if (Nucleus_Unlikely(status))
+	{ return status; }
+	
     Nucleus_Object *temporary;
-
-    if (Nucleus_Unlikely(size < sizeof(Nucleus_Object)))
-    { return Nucleus_Status_InvalidArgument; }
-
-    status = Nucleus_allocateMemory((void **)&temporary, size);
+    status = Nucleus_allocateMemory((void **)&temporary, classType->objectSize);
     if (Nucleus_Unlikely(status)) return status;
     
     temporary->type = NULL;
@@ -139,6 +186,7 @@ Nucleus_Object_getType
                                             sizeof(Nucleus_Object_Class),
                                             (Nucleus_Status (*)(void *))&constructDispatch,
                                             NULL,
+											NULL,
                                             &notifyShutdownContext);
         if (Nucleus_Unlikely(status)) return status;
     }
@@ -192,7 +240,7 @@ Nucleus_Object_equalTo
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    return NUCLEUS_OBJECT_CLASS(self->type->classType.dispatch)->equalTo(self, other, equalTo);
+    return NUCLEUS_OBJECT_CLASS(NUCLEUS_CLASSTYPE(self->type)->dispatch)->equalTo(self, other, equalTo);
 }
 
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
@@ -203,7 +251,7 @@ Nucleus_Object_hash
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    return NUCLEUS_OBJECT_CLASS(self->type->classType.dispatch)->hash(self, hashValue);
+    return NUCLEUS_OBJECT_CLASS(NUCLEUS_CLASSTYPE(self->type)->dispatch)->hash(self, hashValue);
 }
 
 DEFINE_MODULE(Nucleus_Objects)

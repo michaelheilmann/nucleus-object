@@ -94,14 +94,13 @@ before_script:
 # Invoke CMake on CMakeLists.txt.
 - eval "${MATRIX_EVAL_BEFORE_SCRIPT}"
 - cd "${TRAVIS_BUILD_DIR}"
-- cmake CMakeLists.txt
+- cmake -DNucleus-With-Tests=OFF CMakeLists.txt
 
 script:
 # Enter the Travis build directory.
 - cd "${TRAVIS_BUILD_DIR}"
 # Run "make all" and "make test".
-- make all
-- ctest --output-on-failure --extra-verbose
+- make all && make CTEST_OUTPUT_ON_FAILURE=1 test
 
 notifications:
   webhooks:

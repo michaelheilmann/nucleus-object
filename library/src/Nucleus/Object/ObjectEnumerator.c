@@ -19,6 +19,13 @@ constructDispatch
 }
 
 Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
+constructSignals
+    (
+        Nucleus_ObjectEnumerator_Class *dispatch
+    )
+{ return Nucleus_Status_Success; }
+
+Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
 destruct
     (
         Nucleus_ObjectEnumerator *self
@@ -48,14 +55,14 @@ Nucleus_ObjectEnumerator_hasObject
         Nucleus_ObjectEnumerator *self,
         Nucleus_Boolean *hasObject
     )
-{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_OBJECT(self)->type->classType.dispatch)->hasObject(self, hasObject); }
+{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_CLASSTYPE(NUCLEUS_OBJECT(self)->type)->dispatch)->hasObject(self, hasObject); }
 
 Nucleus_NonNull() Nucleus_Status
 Nucleus_ObjectEnumerator_nextObject
     (
         Nucleus_ObjectEnumerator *self
     )
-{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_OBJECT(self)->type->classType.dispatch)->nextObject(self); }
+{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_CLASSTYPE(NUCLEUS_OBJECT(self)->type)->dispatch)->nextObject(self); }
 
 Nucleus_NonNull() Nucleus_Status
 Nucleus_ObjectEnumerator_getObject
@@ -63,4 +70,4 @@ Nucleus_ObjectEnumerator_getObject
         Nucleus_ObjectEnumerator *self,
         Nucleus_Object **object
     )
-{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_OBJECT(self)->type->classType.dispatch)->getObject(self, object); }
+{ return NUCLEUS_OBJECTENUMERATOR_CLASS(NUCLEUS_CLASSTYPE(NUCLEUS_OBJECT(self)->type)->dispatch)->getObject(self, object); }

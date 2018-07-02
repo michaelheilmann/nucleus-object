@@ -43,7 +43,7 @@ Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
 Nucleus_Object_allocate
     (
         Nucleus_Object **object,
-        Nucleus_Size size
+        Nucleus_Type *type
     );
 
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
@@ -78,3 +78,89 @@ Nucleus_Object_hash
         Nucleus_Object *self,
         Nucleus_HashValue *hashValue
     );
+
+#define Nucleus_Parameters(...) \
+	__VA_ARGS__
+	
+#define Nucleus_Arguments(...) \
+	__VA_ARGS__
+
+#define Nucleus_DeclareDefaultCreate(NameCxx) \
+	Nucleus_NonNull() Nucleus_Status \
+	NameCxx##_create \
+		( \
+			NameCxx **object \
+		);
+
+#define Nucleus_DefineDefaultCreate(NameCxx) \
+	Nucleus_NonNull() Nucleus_Status \
+	NameCxx##_create \
+		( \
+			NameCxx **object \
+		) \
+	{ \
+		/* Validate arguments. */ \
+		if (Nucleus_Unlikely(!object)) return Nucleus_Status_InvalidArgument; \
+		/* Local variables. */ \
+		Nucleus_Type *type; \
+		NameCxx *temporary; \
+		Nucleus_Status status; \
+		/* Get the type. */ \
+		status = NameCxx##_getType(&type); \
+		if (Nucleus_Unlikely(status)) return status; \
+		/* Allocate object. */ \
+		status = Nucleus_Object_allocate((Nucleus_Object **)&temporary, type); \
+		if (Nucleus_Unlikely(status)) return status; \
+		/* Construct object. */ \
+		status = NameCxx##_construct(temporary); \
+		if (Nucleus_Unlikely(status)) \
+		{ \
+			Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary)); \
+			return status; \
+		} \
+		/* Return object. */ \
+		*object = temporary; \
+		/* Return success. */ \
+		return Nucleus_Status_Success; \
+	}
+	
+#define Nucleus_DeclareCreate(NameCxx, ParametersCxx, ArgumentsCxx) \
+	Nucleus_NonNull() Nucleus_Status \
+	NameCxx##_create \
+		( \
+			NameCxx **object, \
+			ParametersCxx \
+		);
+
+#define Nucleus_DefineCreate(NameCxx, ParametersCxx, ArgumentsCxx) \
+	Nucleus_NonNull() Nucleus_Status \
+	NameCxx##_create \
+		( \
+			NameCxx **object, \
+			ParametersCxx \
+		) \
+	{ \
+		/* Validate arguments. */ \
+		if (Nucleus_Unlikely(!object)) return Nucleus_Status_InvalidArgument; \
+		/* Local variables. */ \
+		Nucleus_Type *type; \
+		NameCxx *temporary; \
+		Nucleus_Status status; \
+		/* Get the type. */ \
+		status = NameCxx##_getType(&type); \
+		if (Nucleus_Unlikely(status)) return status; \
+		/* Allocate object. */ \
+		status = Nucleus_Object_allocate((Nucleus_Object **)&temporary, type); \
+		if (Nucleus_Unlikely(status)) return status; \
+		/* Construct object. */ \
+		status = NameCxx##_construct(temporary, ArgumentsCxx); \
+		if (Nucleus_Unlikely(status)) \
+		{ \
+			Nucleus_Object_decrementReferenceCount(NUCLEUS_OBJECT(temporary)); \
+			return status; \
+		} \
+		/* Return object. */ \
+		*object = temporary; \
+		/* Return success. */ \
+		return Nucleus_Status_Success; \
+	}

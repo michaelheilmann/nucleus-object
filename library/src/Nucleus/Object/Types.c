@@ -26,6 +26,7 @@ Nucleus_Types_addClassType
         Nucleus_Status (*objectDestructor)(void *object),
         Nucleus_Size dispatchSize,
         Nucleus_Status (*dispatchConstructor)(void *dispatch),
+		Nucleus_Status (*signalsConstructor)(void *dispatch),
         Nucleus_Type *parentType,
         Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)(Nucleus_Type *)
     )
@@ -50,9 +51,11 @@ Nucleus_Types_addClassType
         return status;
     }
     // Create the type.
-    status = createClassType(&type1, name, objectSize, objectDestructor,
-                                           dispatchSize, dispatchConstructor,
-                                           parentType, notifyShutdown);
+    status = Nucleus_ClassType_create((Nucleus_ClassType **)&type1, name,
+	                                  objectSize, objectDestructor,
+                                      dispatchSize, dispatchConstructor,
+									  signalsConstructor,
+                                      parentType, notifyShutdown);
     if (Nucleus_Unlikely(status))
     {
         Nucleus_Types_Mutex_unlock(&g_singletonMutex);
@@ -62,7 +65,7 @@ Nucleus_Types_addClassType
     status = Nucleus_FinalizationHooks_add(type1, NUCLEUS_CALLBACK(notifyShutdown));
     if (Nucleus_Unlikely(status))
     {
-        destroyClassType(type1);
+        Nucleus_Type_destroy(type1);
         return status;
     }
     // Add the type.
@@ -71,7 +74,7 @@ Nucleus_Types_addClassType
     if (Nucleus_Unlikely(status))
     {
         Nucleus_FinalizationHooks_removeAll(type);
-        destroyClassType(type1);
+        Nucleus_Type_destroy(type1);
         Nucleus_Types_Mutex_unlock(&g_singletonMutex);
         return status;       
     }

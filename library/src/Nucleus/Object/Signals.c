@@ -7,62 +7,10 @@
 DEFINE_MODULE(Nucleus_Signals)
 
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
-addSignal
-    (
-        Nucleus_Signal **signal,
-        Nucleus_ImmutableString *name,
-        Nucleus_Type *type,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
-    )
-{
-    Nucleus_Status status;
-    // Search the class for the signal.
-    Nucleus_Signal *s;
-    status = lookupInClasses(&s, name, type);
-    if (Nucleus_Unlikely(status))
-    {
-        return status;
-    }
-    if (s)
-    {
-        fprintf(stderr, u8"%s:%d: signal already exists\n", __FILE__, __LINE__);
-        return Nucleus_Status_Exists;
-    }
-    // The signal does not exist. Create it, add it.
-    status = Signal_create(&s, name, type);
-    if (Nucleus_Unlikely(status))
-    {
-        return status;
-    }
-    SignalKey *k;
-    status = SignalKey_create(&k, name, type);
-    if (Nucleus_Unlikely(status))
-    {
-        Signal_destroy(s);
-        return status;
-    }
-    status = Nucleus_Collections_PointerHashMap_set(&g_singleton->signals,
-                                                    (void *)k, (void *)s,
-                                                    Nucleus_Boolean_False);
-    if (Nucleus_Unlikely(status))
-    {
-        SignalKey_destroy(k);
-        Signal_destroy(s);
-        return status;
-    }
-
-    // Return success.
-    return Nucleus_Status_Success;
-}
-
-// Add a signal.
-Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
 Nucleus_Signals_addSignal
     (
-        Nucleus_Signal **signal,
         const char *name,
-        Nucleus_Type *type,
-        Nucleus_AlwaysSucceed() Nucleus_Status (*notifyShutdown)()
+        Nucleus_Type *type
     )
 {
     Nucleus_Status status;
@@ -71,10 +19,70 @@ Nucleus_Signals_addSignal
     status = Nucleus_ImmutableString_create(&name1, name, strlen(name));
     if (Nucleus_Unlikely(status)) return status;
     //
-    status = addSignal(signal, name1, type, notifyShutdown);
+    status = addSignal(name1, type);
     Nucleus_ImmutableString_unlock(name1);
     //
     return status;
+}
+
+Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
+Nucleus_Signals_removeAllSignals
+    (
+        Nucleus_Type *type
+    )
+{
+	Nucleus_Status status;
+	Nucleus_Collections_PointerHashMap_Enumerator e;
+	status = Nucleus_Collections_PointerHashMap_Enumerator_initialize(&e, &g_singleton->signals);
+	if (Nucleus_Unlikely(status))
+	{
+		return status;
+	}
+	while (Nucleus_Boolean_True)
+	{
+		Nucleus_Boolean hasValue;
+		//
+		status = Nucleus_Collections_PointerHashMap_Enumerator_hasValue(&e, &hasValue);
+		if (Nucleus_Unlikely(status))
+		{
+			Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
+			return status;
+		}
+		//
+		if (!hasValue)
+		{
+			break;
+		}
+		//
+		void *k, *v;
+		status = Nucleus_Collections_PointerHashMap_Enumerator_getValue(&e, &k, &v);
+		if (Nucleus_Unlikely(status))
+		{
+			Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
+			return status;
+		}
+		//
+		if (((Nucleus_Signal *)v)->type == type)
+		{
+			status = Nucleus_Collections_PointerHashMap_Enumerator_remove(&e);
+			if (Nucleus_Unlikely(status))
+			{
+				Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
+				return status;
+			}
+		}
+		else
+		{
+			status = Nucleus_Collections_PointerHashMap_Enumerator_next(&e);
+			if (Nucleus_Unlikely(status))
+			{
+				Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
+				return status;
+			}
+		}
+	}
+	Nucleus_Collections_PointerHashMap_Enumerator_uninitialize(&e);
+	return Nucleus_Status_Success;
 }
 
 Nucleus_Object_Library_Export Nucleus_NonNull() Nucleus_Status
