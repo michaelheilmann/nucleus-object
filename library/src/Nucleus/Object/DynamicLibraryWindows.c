@@ -5,6 +5,12 @@
 
 #include "Nucleus/Memory.h"
 #include "Nucleus/transcodeString.h"
+#include "Nucleus/IncludesWindows.h"
+
+struct Nucleus_DynamicLibraryWindowsImpl
+{
+	HINSTANCE handle;
+};
 
 Nucleus_NonNull() static Nucleus_Status
 load
@@ -33,10 +39,21 @@ Nucleus_DynamicLibraryWindows_construct
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    Nucleus_Status status;
-    status = Nucleus_DynamicLibrary_construct(NUCLEUS_DYNAMICLIBRARY(self), pathname);
+    
+	Nucleus_Status status;
+    
+	status = Nucleus_DynamicLibrary_construct(NUCLEUS_DYNAMICLIBRARY(self), pathname);
     if (Nucleus_Unlikely(status)) return status;
-    self->handle = NULL;
+
+	status = Nucleus_allocateMemory(&self->pimpl, sizeof(Nucleus_DynamicLibraryWindowsImpl));
+	if (Nucleus_Unlikely(status))
+	{
+		Nucleus_DynamicLibrary_destruct(NUCLEUS_DYNAMICLIBRARY(self));
+		return status;
+	}
+
+	self->pimpl->handle = NULL;
+
     NUCLEUS_DYNAMICLIBRARY(self)->load = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&load;
     NUCLEUS_DYNAMICLIBRARY(self)->getSymbol = (Nucleus_Status (*)(Nucleus_DynamicLibrary *, const char *, void **))&getSymbol;
     NUCLEUS_DYNAMICLIBRARY(self)->destruct = (Nucleus_Status (*)(Nucleus_DynamicLibrary *))&Nucleus_DynamicLibraryWindows_destruct;
@@ -49,11 +66,13 @@ Nucleus_DynamicLibraryWindows_destruct
         Nucleus_DynamicLibraryWindows *self
     )
 {
-    if (NULL != self->handle)
+    if (NULL != self->pimpl->handle)
     {
-        FreeLibrary(self->handle);
-        self->handle = NULL;
+        FreeLibrary(self->pimpl->handle);
+        self->pimpl->handle = NULL;
     }
+	Nucleus_deallocateMemory(self->pimpl);
+	self->pimpl = NULL;
     return Nucleus_DynamicLibrary_destruct(NUCLEUS_DYNAMICLIBRARY(self));
 }
 
@@ -87,15 +106,15 @@ load
     )
 {
     if (Nucleus_Unlikely(!self)) return Nucleus_Status_InvalidArgument;
-    if (NULL == self->handle)
+    if (NULL == self->pimpl->handle)
     {
         Nucleus_UCS16 *pathnameInternal;
         Nucleus_Status status;
         status = Nucleus_UTF8_to_UCS16(&pathnameInternal, NUCLEUS_DYNAMICLIBRARY(self)->pathname);
         if (Nucleus_Unlikely(status)) return status;
-        self->handle = LoadLibraryEx(pathnameInternal, NULL, 0);
+        self->pimpl->handle = LoadLibraryEx(pathnameInternal, NULL, 0);
         Nucleus_deallocateMemory(pathnameInternal);
-        if (NULL == self->handle)
+        if (NULL == self->pimpl->handle)
         {
             return Nucleus_Status_NotFound;
         }
@@ -112,13 +131,13 @@ getSymbol
     )
 {
     if (Nucleus_Unlikely(!self || !symbolName || !symbol)) return Nucleus_Status_InvalidArgument;
-    if (NULL == self->handle) return Nucleus_Status_NotOpen;
+    if (NULL == self->pimpl->handle) return Nucleus_Status_NotOpen;
     Nucleus_Status status;
     char *symbolNameAscii;
     // Convert to ASCII.
     status = Nucleus_UTF8_to_ASCII(&symbolNameAscii, symbolName);
     if (Nucleus_Unlikely(status)) return status;
-    void *temporary = GetProcAddress(self->handle, symbolNameAscii);
+    void *temporary = GetProcAddress(self->pimpl->handle, symbolNameAscii);
     Nucleus_deallocateMemory(symbolNameAscii);
     if (NULL == temporary)
     {
