@@ -6,15 +6,17 @@
 #if (Nucleus_OperatingSystem == Nucleus_OperatingSystem_WINDOWS)
 
 #include "Nucleus/Object/DynamicLibrary.h"
-#include "Nucleus/IncludesWindows.h"
+
 
 typedef struct Nucleus_DynamicLibraryWindows Nucleus_DynamicLibraryWindows;
 #define NUCLEUS_DYNAMICLIBRARYWINDOWS(p) ((Nucleus_DynamicLibraryWindows *)(p))
 
+typedef struct Nucleus_DynamicLibraryWindowsImpl Nucleus_DynamicLibraryWindowsImpl;
+
 struct Nucleus_DynamicLibraryWindows
 {
     Nucleus_DynamicLibrary parent;
-    HINSTANCE handle;
+	Nucleus_DynamicLibraryWindowsImpl *pimpl;
 }; // struct Nucleus_DynamicLibraryWindows
 
 Nucleus_NonNull() Nucleus_Status
