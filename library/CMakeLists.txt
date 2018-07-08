@@ -18,9 +18,26 @@ else()
   define_static_library(Nucleus.Object Nucleus.Object.Library ${NUCLEUS_LANGUAGE_ID_C})
 endif()
 
+# Nucleus: Object requires dynamic invocations of functions.
+# To achieve this, libffi is used under Linux and MASM assembler is used under Windows.
+# This tries to detect MASM under Visual C++.
+if (${Nucleus.Object.Library_C_COMPILER_ID} EQUAL ${NUCLEUS_C_COMPILER_ID_MSVC})
+  if (${Nucleus.Object.Library_LANGUAGE_ID} EQUAL ${NUCLEUS_LANGUAGE_ID_C})
+    ENABLE_LANGUAGE(ASM_MASM)
+    message("checking for MASM for Visual C++ (C)")
+  elseif(${Nucleus.Object.Library_LANGUAGE_ID} EQUAL ${NUCLEUS_LANGUAGE_ID_CPP})
+    ENABLE_LANGUAGE(ASM_MASM)
+    message("checking for MASM for Visual C++ (C++)")
+  endif()
+endif()
+
+# Nucleus: Object requires Nucleus.
 target_link_libraries(Nucleus.Object.Library PUBLIC Nucleus.Library)
+
+# Nucleus:Object requires dynamic (as opposed to shared and static) library support (GCC/Clang).
 # GCC or Clang: Link library with the platform's dynamically loadable library libraries.
-if (${Nucleus.Object.Library_C_COMPILER_ID} EQUAL ${NUCLEUS_C_COMPILER_ID_GCC} OR ${Nucleus.Object.Library_C_COMPILER_ID} EQUAL ${NUCLEUS_C_COMPILER_ID_CLANG})
+if ((${Nucleus.Object.Library_C_COMPILER_ID} EQUAL ${NUCLEUS_C_COMPILER_ID_GCC}) OR
+    (${Nucleus.Object.Library_C_COMPILER_ID} EQUAL ${NUCLEUS_C_COMPILER_ID_CLANG}))
   target_link_libraries(Nucleus.Object.Library PUBLIC dl)
 endif()
 

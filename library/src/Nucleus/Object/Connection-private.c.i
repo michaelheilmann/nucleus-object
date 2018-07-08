@@ -5,6 +5,7 @@ Connection_create
     (
         Connection **connection,
         Nucleus_Signal *signal,
+        Nucleus_Object *sink,
         Nucleus_Callback *callback
     )
 {
@@ -17,7 +18,9 @@ Connection_create
     }
     //
     temporary->signal = signal;
+    temporary->sink = sink;
     temporary->callback = callback;
+    //
     *connection = temporary;
     return Nucleus_Status_Success;
 }

@@ -1,6 +1,9 @@
 // Copyright (c) 2018 Michael Heilmann
 #include "Nucleus/Object/Signals-private.h.i"
 
+#include "Nucleus/Hash/Pointer.h"
+#include "Nucleus/EqualTo/Pointer.h"
+
 #if defined(Nucleus_WithSignals) && 1 == Nucleus_WithSignals
 
 DEFINE_MODULE_PRIVATE(Nucleus_Signals)
@@ -254,8 +257,8 @@ __Nucleus_Signals_initialize
                                                            8,
                                                            NULL,
                                                            NULL,
-                                                           NUCLEUS_HASHFUNCTION(&Nucleus_Object_hash), // hash
-                                                           NUCLEUS_EQUALTOFUNCTION(&Nucleus_Object_equalTo), // equal
+                                                           NUCLEUS_HASHFUNCTION(&Nucleus_hashPointer), // hash
+                                                           NUCLEUS_EQUALTOFUNCTION(&Nucleus_equalToPointer), // equal
                                                            NULL,
                                                            NUCLEUS_UNLOCKFUNCTION(&Connections_destroy));
     if (Nucleus_Unlikely(status))

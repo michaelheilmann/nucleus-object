@@ -2,6 +2,9 @@
 #include "Nucleus/Object/DynamicLibrary.h"
 #include "Nucleus/Object/Types.h"
 #include "Nucleus/Memory.h"
+#include "Nucleus/C/strcpy.h"
+#include "Nucleus/C/strdup.h"
+#include "Nucleus/C/strcat.h"
 #include "Nucleus/getExecutableDirectoryPathname.h"
 #include <stdlib.h>
 #include <string.h>
@@ -49,10 +52,10 @@ load
                           u8"Nucleus_allocateMemory");
                   Nucleus_deallocateMemory(dllSearchPathPathname);
                   return status; }
-    strcpy(dllPathname, dllSearchPathPathname);
-    strcat(dllPathname, dllFilename);
-    strcat(dllPathname, ".");
-    strcat(dllPathname, dllExtension);
+    C_strcpy(dllPathname, dllSearchPathPathname);
+    C_strcat(dllPathname, dllFilename);
+    C_strcat(dllPathname, ".");
+    C_strcat(dllPathname, dllExtension);
     Nucleus_deallocateMemory(dllSearchPathPathname);
     
     // Load the DLL.
