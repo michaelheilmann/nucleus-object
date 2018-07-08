@@ -2,6 +2,7 @@
 #include "Nucleus/Object/DynamicLibrary.h"
 
 #include "Nucleus/Memory.h"
+#include "Nucleus/C/strdup.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,7 +20,7 @@ Nucleus_DynamicLibrary_construct
     )
 {
     if (Nucleus_Unlikely(!self || !pathname)) return Nucleus_Status_InvalidArgument;
-     self->pathname = strdup(pathname);
+     self->pathname = C_strdup(pathname);
     if (Nucleus_Unlikely(!self->pathname))
     {
         return Nucleus_Status_AllocationFailed;

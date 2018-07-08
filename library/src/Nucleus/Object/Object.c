@@ -84,6 +84,9 @@ destroy
         }
         self->type = NUCLEUS_CLASSTYPE(type)->parentType;
     }
+#if defined(Nucleus_WithSignals) && 1 == Nucleus_WithSignals
+    Nucleus_Signals_disconnectAll(self);
+#endif
     Nucleus_deallocateMemory(self);
     return Nucleus_Status_Success;
 }
@@ -186,7 +189,7 @@ Nucleus_Object_getType
                                             sizeof(Nucleus_Object_Class),
                                             (Nucleus_Status (*)(void *))&constructDispatch,
                                             NULL,
-											NULL,
+                                            NULL,
                                             &notifyShutdownContext);
         if (Nucleus_Unlikely(status)) return status;
     }

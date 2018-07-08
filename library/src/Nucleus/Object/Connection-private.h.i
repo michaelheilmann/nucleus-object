@@ -15,6 +15,7 @@ typedef struct Connection Connection;
 struct Connection
 {
     Connection *next;
+    Nucleus_Object *sink;
     Nucleus_Signal *signal;
     Nucleus_Callback *callback;
 }; // struct Connection
@@ -24,6 +25,7 @@ Connection_create
     (
         Connection **connection,
         Nucleus_Signal *signal,
+        Nucleus_Object *sink,
         Nucleus_Callback *callback
     );
 
