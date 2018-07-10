@@ -1,10 +1,9 @@
 // Copyright (c) 2018 Michael Heilmann
 #pragma once
 
-// Signals are supported if this is defined and 1.
-#define Nucleus_WithSignals (1)
+#include "Nucleus/Object/Configuration.h"
 
-#if defined(Nucleus_WithSignals) && 1 == Nucleus_WithSignals
+#if defined(Nucleus_WithSignals) && (1 == Nucleus_WithSignals)
 
 #include "Nucleus/Annotations.h"
 #include "Nucleus/Status.h"
@@ -38,7 +37,10 @@ Nucleus_Signals_removeAllSignals
         Nucleus_Type *type
     );
 
-// Connect to a signal.
+// Add a connection to an object.
+// `name` the name of the signal
+// `sink` a pointer to the sink or a null pointer
+// `callback` a pointer to the callback function
 // If the signal is invoked, then sink is passed as the first argument to the callback, source as
 // the second argument, the last argument is a pointer to a Nucleus_Object or derived type object
 // or a null pointer depending on the signal. The sink may be a null pointer.
@@ -58,6 +60,8 @@ Nucleus_Signals_getNumberOfConnections
         Nucleus_Size *count
     );
 
+// Remove the first connection of an object
+// with the specified name, the specified sink, and the specified callback.
 Nucleus_Object_Library_Export Nucleus_NonNull(1, 2, 4) Nucleus_Status
 Nucleus_Signals_disconnect
     (
@@ -67,10 +71,19 @@ Nucleus_Signals_disconnect
         Nucleus_Callback *callback
     );
 
+// Remove all connection of an object.
 Nucleus_Object_Library_Export Nucleus_NonNull(1) Nucleus_Status
 Nucleus_Signals_disconnectAll
     (
         Nucleus_Object *source
+    );
+   
+Nucleus_Object_Library_Export Nucleus_NonNull(1, 2) Nucleus_Status
+Nucleus_Signal_invoke
+    (
+        Nucleus_Object *source,
+        const char *name,
+        Nucleus_Object *arguments
     );
 
 #endif

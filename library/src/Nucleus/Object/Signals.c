@@ -259,4 +259,45 @@ Nucleus_Signals_disconnectAll
     return Nucleus_Status_Success;   
 }
 
+#if !defined(Nucleus_Cast)
+  #define Nucleus_Cast(T, E) ((T)(E))
+#endif
+
+typedef Nucleus_Status (Nucleus_SignalFunction)(Nucleus_Object *self, Nucleus_Object *source, Nucleus_Object *arguments);
+
+Nucleus_Object_Library_Export Nucleus_NonNull(1, 2) Nucleus_Status
+Nucleus_Signal_invoke
+    (
+        Nucleus_Object *source,
+        const char *name,
+        Nucleus_Object *arguments
+    )
+{
+    // Get the connections of the source.
+    Connections *connections = NULL;
+    Nucleus_Status status;
+    status = Nucleus_Collections_PointerHashMap_get(&g_singleton->connections, source,
+                                                    (void **)&connections);
+    // If there are not connections for the source, we are done.
+    if (status == Nucleus_Status_NotExists) return Nucleus_Status_Success;
+    // Get the signal.
+    Nucleus_Signal *signal;
+    status = lookupSignal(&signal, source, name);
+    if (Nucleus_Unlikely(status)) return status;
+    // There are connections for the source: Search and remove the connection.
+    Connection *current = connections->connections;
+    while (current)
+    {
+        if (current->signal == signal && current->callback)
+        {
+            
+            status = Nucleus_Cast(Nucleus_SignalFunction *, current->callback)
+            (current->sink, source, arguments);
+            if (Nucleus_Unlikely(status)) return status;
+        }
+        current = current->next;
+    }
+    return Nucleus_Status_Success;
+}
+
 #endif

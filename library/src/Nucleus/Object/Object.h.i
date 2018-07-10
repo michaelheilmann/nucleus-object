@@ -8,6 +8,7 @@
 #include "Nucleus/Object/Type.h"
 #include "Nucleus/Object/Module.h"
 #include "Nucleus/Object/Signals.h"
+#include "Nucleus/Object/FinalizationHooks.h"
 
 #define Nucleus_Objects_Mutex int
 #define Nucleus_Objects_Mutex_Initializer (0)

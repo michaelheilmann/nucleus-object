@@ -1,5 +1,7 @@
 #include "Nucleus/Object/FinalizationHooks-private.c.i"
 
+#if defined(Nucleus_WithFinalizationHooks) && 1 == Nucleus_WithFinalizationHooks
+
 DEFINE_MODULE(Nucleus_FinalizationHooks)
 
 Nucleus_Status
@@ -85,3 +87,5 @@ Nucleus_FinalizationHooks_removeAll
     destroyFinalizationHookList(k);
     return Nucleus_Status_Success; 
 }
+
+#endif
