@@ -1,5 +1,7 @@
 #include "Nucleus/Object/FinalizationHooks-private.h.i"
 
+#if defined(Nucleus_WithFinalizationHooks) && 1 == Nucleus_WithFinalizationHooks
+
 #include "Nucleus/Hash/Pointer.h"
 #include "Nucleus/EqualTo/Pointer.h"
 
@@ -130,3 +132,5 @@ getOrCreateFinalizationHookList
 	*finalizationHookList = temporary;
 	return Nucleus_Status_Success;
 }
+
+#endif

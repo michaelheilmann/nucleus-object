@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Nucleus/Object/FinalizationHooks.h"
+
+#if defined(Nucleus_WithFinalizationHooks) && 1 == Nucleus_WithFinalizationHooks
+
 #include "Nucleus/Memory.h"
 #include "Nucleus/Collections/PointerHashMap.h"
 
@@ -61,3 +64,5 @@ struct Nucleus_FinalizationHooks
 	// Map from object addresses to finalization hook lists.
 	Nucleus_Collections_PointerHashMap finalizationHookLists;
 }; // struct Nucleus_FinalizationHooks
+
+#endif

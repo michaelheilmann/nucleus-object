@@ -18,8 +18,9 @@ hash
     );
 
 Nucleus_AlwaysSucceed() static Nucleus_Status
-notifyShutdownContext
+notifyTypeFinalized
     (
+        Nucleus_Type *type
     );
 
 Nucleus_AlwaysSucceed() Nucleus_NonNull() static Nucleus_Status
@@ -61,8 +62,9 @@ hash
 }
 
 Nucleus_AlwaysSucceed() static Nucleus_Status
-notifyShutdownContext
+notifyTypeFinalized
     (
+        Nucleus_Type *type
     )
 {
     g_type = NULL;
@@ -87,6 +89,9 @@ destroy
 #if defined(Nucleus_WithSignals) && 1 == Nucleus_WithSignals
     Nucleus_Signals_disconnectAll(self);
 #endif
+#if defined(Nucleus_WithFinalizationHooks) && 1 == Nucleus_WithFinalizationHooks
+    Nucleus_FinalizationHooks_invoke(self);
+#endif
     Nucleus_deallocateMemory(self);
     return Nucleus_Status_Success;
 }
@@ -106,60 +111,60 @@ Nucleus_NonNull() Nucleus_Status
 Nucleus_Object_allocate
     (
         Nucleus_Object **object,
-		Nucleus_Type *type
+        Nucleus_Type *type
     )
 {
-	if (Nucleus_Unlikely(!object))
-	{
-		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == object");
-		return Nucleus_Status_InvalidArgument;
-	}
-	if (Nucleus_Unlikely(!type))
-	{
-		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == type");
-		return Nucleus_Status_InvalidArgument;
-	}
-	if (type->kind != Nucleus_TypeKind_Class)
-	{
-		fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "not a class type");
-		return Nucleus_Status_InvalidArgument;
-	}
+    if (Nucleus_Unlikely(!object))
+    {
+        fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == object");
+        return Nucleus_Status_InvalidArgument;
+    }
+    if (Nucleus_Unlikely(!type))
+    {
+        fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "NULL == type");
+        return Nucleus_Status_InvalidArgument;
+    }
+    if (type->kind != Nucleus_TypeKind_Class)
+    {
+        fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "not a class type");
+        return Nucleus_Status_InvalidArgument;
+    }
 
-	Nucleus_ClassType *classType = NUCLEUS_CLASSTYPE(type);
-	if (classType->parentType)
-	{
-		Nucleus_ClassType *parentClassType = NUCLEUS_CLASSTYPE(classType->parentType);
-		if (Nucleus_Unlikely(classType->objectSize < parentClassType->objectSize))
-		{
-			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
-			return Nucleus_Status_InvalidArgument;
-		}
-		if (Nucleus_Unlikely(classType->dispatchSize < parentClassType->dispatchSize))
-		{
-			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
-			return Nucleus_Status_InvalidArgument;
-		}
-	}
-	else
-	{
-		if (Nucleus_Unlikely(classType->objectSize < sizeof(Nucleus_Object)))
-		{
-			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
-			return Nucleus_Status_InvalidArgument;
-		}
-		if (Nucleus_Unlikely(classType->dispatchSize < sizeof(Nucleus_Object_Class)))
-		{
-			fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
-			return Nucleus_Status_InvalidArgument;
-		}
-	}
+    Nucleus_ClassType *classType = NUCLEUS_CLASSTYPE(type);
+    if (classType->parentType)
+    {
+        Nucleus_ClassType *parentClassType = NUCLEUS_CLASSTYPE(classType->parentType);
+        if (Nucleus_Unlikely(classType->objectSize < parentClassType->objectSize))
+        {
+            fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
+            return Nucleus_Status_InvalidArgument;
+        }
+        if (Nucleus_Unlikely(classType->dispatchSize < parentClassType->dispatchSize))
+        {
+            fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
+            return Nucleus_Status_InvalidArgument;
+        }
+    }
+    else
+    {
+        if (Nucleus_Unlikely(classType->objectSize < sizeof(Nucleus_Object)))
+        {
+            fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid object size");
+            return Nucleus_Status_InvalidArgument;
+        }
+        if (Nucleus_Unlikely(classType->dispatchSize < sizeof(Nucleus_Object_Class)))
+        {
+            fprintf(stderr, "%s: invalid argument (%s)\n", "Nucleus_Object_allocate", "invalid dispatch size");
+            return Nucleus_Status_InvalidArgument;
+        }
+    }
 
     Nucleus_Status status;
-	
-	status = Nucleus_ClassType_initialize(classType);
-	if (Nucleus_Unlikely(status))
-	{ return status; }
-	
+    
+    status = Nucleus_ClassType_initialize(classType);
+    if (Nucleus_Unlikely(status))
+    { return status; }
+    
     Nucleus_Object *temporary;
     status = Nucleus_allocateMemory((void **)&temporary, classType->objectSize);
     if (Nucleus_Unlikely(status)) return status;
@@ -190,7 +195,7 @@ Nucleus_Object_getType
                                             (Nucleus_Status (*)(void *))&constructDispatch,
                                             NULL,
                                             NULL,
-                                            &notifyShutdownContext);
+                                            &notifyTypeFinalized);
         if (Nucleus_Unlikely(status)) return status;
     }
     *type = g_type;
